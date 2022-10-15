@@ -2,7 +2,7 @@
 
 ## Module: Lamina Landmark Labeling
 ### UI figure
-<img src="https://github.com/SenonETS/3DSlicerTutorial_ExtensionModuleDevelopment/blob/master/sl_01__LaminaLandmark_Labeling/SL_ScreenShot.PNG" alt="isolated" width="800"/>
+<img src="https://github.com/SenonETS/SlicerIGSpineDeformity/blob/main/sl_01__LaminaLandmark_Labeling/SL_ScreenShot.PNG" alt="isolated" width="800"/>
 
 ### Tutorial: click the image to watch videos on YouTube
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/VcqLfAGfE6E/0.jpg)](https://www.youtube.com/watch?v=VcqLfAGfE6E&list=PLTuWbByD80TORd1R-J7j7nVQ9fot3C2fK)
