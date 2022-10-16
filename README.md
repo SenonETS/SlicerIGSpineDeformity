@@ -5,6 +5,9 @@
 <img src="https://github.com/SenonETS/SlicerIGSpineDeformity/blob/main/sl_01__LaminaLandmark_Labeling/SL_ScreenShot.PNG" alt="isolated" width="800"/>
 
 ### Tutorial: click the image to watch videos on YouTube
+Prerequisite:	in cmd/terminal, install PyQt5 by   
+ <code>"Slicer 5.0.3\bin\PythonSlicer.exe" -m pip install PyQt5</code>
+
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/VcqLfAGfE6E/0.jpg)](https://www.youtube.com/watch?v=VcqLfAGfE6E&list=PLTuWbByD80TORd1R-J7j7nVQ9fot3C2fK)
 
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/rr0Q9GUuz7E/0.jpg)](https://www.youtube.com/watch?v=rr0Q9GUuz7E&list=PLTuWbByD80TORd1R-J7j7nVQ9fot3C2fK)
