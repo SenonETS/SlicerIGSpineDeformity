@@ -8,7 +8,8 @@ import logging
 import os
 
 import vtk, qt
-from PyQt5.QtWidgets import QMessageBox, QFileDialog
+from qt import QMessageBox
+# from PyQt5.QtWidgets import QFileDialog
 
 
 import slicer
@@ -1182,8 +1183,10 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
                 return
 
         # 02. Pop out OpenFile-Dialog to let users choose the NumpyLandmark file
-        strFilePath_NumpyLandmarks, _ = QFileDialog.getOpenFileName(caption='Load target NumpyLandmark file', \
-                                    directory=slicer.mrmlScene.GetRootDirectory(), filter="NumpyLandmark file (*.npy)")
+        # strFilePath_NumpyLandmarks, _ = QFileDialog.getOpenFileName(caption='Load target NumpyLandmark file', \
+        #                             directory=slicer.mrmlScene.GetRootDirectory(), filter="NumpyLandmark file (*.npy)")
+        strFilePath_NumpyLandmarks = qt.QFileDialog.getOpenFileName( slicer.util.mainWindow(),  \
+                    'Load target NumpyLandmark file', slicer.mrmlScene.GetRootDirectory(), "NumpyLandmark file (*.npy)")
         if not strFilePath_NumpyLandmarks:
             return
 
