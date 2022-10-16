@@ -7,6 +7,10 @@
 ### Tutorial: click the image to watch videos on YouTube
 Prerequisite:	in cmd/terminal, install PyQt5 by   
  <code>"Slicer 5.0.3\bin\PythonSlicer.exe" -m pip install PyQt5</code>
+ 
+ Example Code: <a href="https://www.dropbox.com/s/jxdn5bdex3v4u8i/00__SlicerScene__PhantomLumbar.zip?dl=0">click here and download am example Scene File (zip) </a>
+
+
 
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/VcqLfAGfE6E/0.jpg)](https://www.youtube.com/watch?v=VcqLfAGfE6E&list=PLTuWbByD80TORd1R-J7j7nVQ9fot3C2fK)
 
