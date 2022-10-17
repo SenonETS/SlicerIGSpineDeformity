@@ -5,10 +5,8 @@
 <img src="https://github.com/SenonETS/SlicerIGSpineDeformity/blob/main/sl_01__LaminaLandmark_Labeling/SL_ScreenShot.PNG" alt="isolated" width="800"/>
 
 ### Tutorial: click the image to watch videos on YouTube
-Prerequisite:	in cmd/terminal, install PyQt5 by   
- <code>"Slicer 5.0.3\bin\PythonSlicer.exe" -m pip install PyQt5</code>
  
- Example Scene File: <a href="https://www.dropbox.com/s/jxdn5bdex3v4u8i/00__SlicerScene__PhantomLumbar.zip?dl=0">click here and download am example Scene File (zip) </a>
+Example Scene File: <a href="https://www.dropbox.com/s/jxdn5bdex3v4u8i/00__SlicerScene__PhantomLumbar.zip?dl=0">click here and download am example Scene File (zip) </a>
 
 
 
