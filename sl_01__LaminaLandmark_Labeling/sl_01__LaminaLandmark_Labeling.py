@@ -95,6 +95,13 @@ NumVar_NumpyLandmark_RAS   = 3             # Number of variables of one landmark
 LIST_NumpyLandmark_VarType = [STR_NumpyLandmark_Var_I, STR_NumpyLandmark_Var_J,   \
                               STR_NumpyLandmark_Var_R, STR_NumpyLandmark_Var_A, STR_NumpyLandmark_Var_S]
 
+STR_DEPTH_6cm		= "6cm" # "55 mm" # 154 # 484
+Valid_ColIdx_Start	= 168
+Valid_ColIdx_End	= 470
+
+Valid_RowIdx_Start 	= 1
+Valid_RowIdx_End	= 478
+
 # ------------------------------------------------------------------------------------------------------------------
 '''=================================================================================================================='''
 #
@@ -1160,7 +1167,7 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
             return
 
         # 01. Get strFileName_NumpyLandmark
-        strFileName_NumpyLandmark = self.logic.obtainStr_FileName_NumpyLandmark(nodeSeqBrowser_Selected.GetName())
+        strFileName_NumpyLandmark = self.logic.obtainStr_FileName_NumpySeqLandmark(nodeSeqBrowser_Selected.GetName())
         # 02. Get strFilePath_NumpyLandmark
         strFilePath_NumpyLandmark = f'{self.logic.obtainStr_SceneFileFolder(nodeSeqBrowser_Selected)}/{strFileName_NumpyLandmark}'
         # 03. Get Numpy Array
@@ -1169,6 +1176,14 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
         np.save(strFilePath_NumpyLandmark, arr_NumpyLandmarks_OneSequence)
         # 05. Pop-up success window
         self.qMessageBox_Information(f"Output Successfully! \n\nFile saved at: \n\n{strFilePath_NumpyLandmark}")
+
+        # 06. Get   nodeSeq_Transform   ->  strFileName_NumpySeqTransform
+        nodeSeq_Transform = self.logic.obtainNodeSeq_GivenProxyNodeName(nodeSeqBrowser_Selected, STR_NodeName_SeqBrowserProxy_LinearTransform)
+        strFileName_NumpySeqTransform = self.logic.obtainStr_FileName_NumpySeqTransform(nodeSeq_Transform.GetName())
+        strFilePath_NumpySeqTransform = f'{self.logic.obtainStr_SceneFileFolder(nodeSeqBrowser_Selected)}/{strFileName_NumpySeqTransform}'
+        arrSeq_NormFeatureVec16       = self.logic.obtainArr_NumpySeqTransform_NormFeatureVec16(nodeSeq_Transform)
+        np.save(strFilePath_NumpySeqTransform, arrSeq_NormFeatureVec16)
+        print(f'Saved arrSeq_NormFeatureVec16 to \n\t{strFilePath_NumpySeqTransform}')
 
     # ------------------------------------------------------------------------------------------------------------------
     def onPushButton_Load_SeqNumpyLandmarks_Clicked(self):
@@ -1185,7 +1200,7 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
         # 02. Pop out OpenFile-Dialog to let users choose the NumpyLandmark file
         # strFilePath_NumpyLandmarks, _ = QFileDialog.getOpenFileName(caption='Load target NumpyLandmark file', \
         #                             directory=slicer.mrmlScene.GetRootDirectory(), filter="NumpyLandmark file (*.npy)")
-        strFilePath_NumpyLandmarks = qt.QFileDialog.getOpenFileName( slicer.util.mainWindow(),  \
+        strFilePath_NumpyLandmarks = qt.QFileDialog.getOpenFileName(slicer.util.mainWindow(),  \
                     'Load target NumpyLandmark file', slicer.mrmlScene.GetRootDirectory(), "NumpyLandmark file (*.npy)")
         if not strFilePath_NumpyLandmarks:
             return
@@ -1387,9 +1402,13 @@ class sl_01__LaminaLandmark_LabelingLogic(ScriptedLoadableModuleLogic):
         return slicer.mrmlScene.GetRootDirectory()
 
 
-    def obtainStr_FileName_NumpyLandmark(self, str_SeqBroswerName):
+    def obtainStr_FileName_NumpySeqLandmark(self, str_SeqBroswerName):
         strFileName_NumpyLandmark = f'{self.obtainStrNodeName_Sequence_pList_Landmarks(str_SeqBroswerName)}__Coord2D3D.npy'
         return strFileName_NumpyLandmark
+
+    def obtainStr_FileName_NumpySeqTransform(self, str_SeqMat_NodeName):
+        strFileName_NumpySeqTransform = f'{str_SeqMat_NodeName}__NormFeatureMat16.npy'
+        return strFileName_NumpySeqTransform
 
     # ------------------------------------------------------------------------------------------------------------------
     def obtainSafe_idxPreFrame_from_TargetSeqBrowser(self, nodeTarget_SeqBrowser):
@@ -1547,7 +1566,12 @@ class sl_01__LaminaLandmark_LabelingLogic(ScriptedLoadableModuleLogic):
 
             # 04-2-D. Fill up   for     idx_LandmarkType:      dict_LandmarksToUpdate      +       arr_FrameLandmarks
             dict_LandmarksToUpdate[str_TargetLandmarkPrefix] = False
-            arr_FrameLandmarks[idx_LandmarkType] = \
+            if tupleImShape_TargetFrame[0] == 640:  #   image with black padding left and right
+                arr_FrameLandmarks[idx_LandmarkType] = \
+                    [round(tuple4D_IJK_SonixTablet[0]) - Valid_ColIdx_Start, round(tuple4D_IJK_SonixTablet[1]) - Valid_RowIdx_Start]  \
+                    + list(vtkVec3d_RAS_World)
+            else:
+                arr_FrameLandmarks[idx_LandmarkType] = \
                         [round(tuple4D_IJK_SonixTablet[0]),round(tuple4D_IJK_SonixTablet[1])] + list(vtkVec3d_RAS_World)
 
         return arr_FrameLandmarks
@@ -1555,13 +1579,10 @@ class sl_01__LaminaLandmark_LabelingLogic(ScriptedLoadableModuleLogic):
     # ------------------------------------------------------------------------------------------------------------------
     def obtainArr_NumpyLandmark_OneSequence(self, nodeSeqBrowser):
         """ **Logic.obtainArr_NumpyLandmark_OneSequence(self, nodeSeqBrowser) """''''''
-        # 00. No landmarks to generate if the SeqBrowser_Selected does not contain the sequence of Landmarks
-        if self.hasLandmarks_inTargetNode_SeqBrowser(nodeSeqBrowser) == False:
-            raise ValueError('SL_Alert! Should not be called if no landmarks'); return
+        nodeSeq_Landmarks = self.obtainNodeSeq_GivenProxyNodeName(nodeSeqBrowser, STR_NodeName_SeqBrowserProxy_Landmarks)
+        if not nodeSeq_Landmarks:
+            raise ValueError('SL_Alert! Should not be called if no landmarks');  return None
 
-        nodeSeq_Landmarks = nodeSeqBrowser.GetSequenceNode(slicer.util.getNode(STR_NodeName_SeqBrowserProxy_Landmarks))
-        if nodeSeqBrowser.GetNumberOfItems() != nodeSeq_Landmarks.GetNumberOfDataNodes():
-            raise ValueError(f'nodeSeq_Landmarks.GetNumberOfDataNodes() = {nodeSeq_Landmarks.GetNumberOfDataNodes()}')
         num_DataNodes = nodeSeqBrowser.GetNumberOfItems()
         arr_SequenceLandmarks = INT_DEFAULT_RAS_VALUE * \
                     np.ones([num_DataNodes, len(LIST_LANDMARK_TYPE), len(LIST_NumpyLandmark_VarType)], dtype = float)
@@ -1571,6 +1592,42 @@ class sl_01__LaminaLandmark_LabelingLogic(ScriptedLoadableModuleLogic):
             arr_SequenceLandmarks[idx_DataNode] = arr_FrameLandmarks
 
         return arr_SequenceLandmarks
+
+    # ------------------------------------------------------------------------------------------------------------------
+    def obtainArr_NumpySeqTransform_NormFeatureVec16(self, nodeSeq_Transform):
+        if (not nodeSeq_Transform) or (nodeSeq_Transform.GetNumberOfDataNodes() == 0):
+            raise ValueError('SL_Alert! Invalid nodeSeq_Transform');  return None
+
+        num_DataNodes = nodeSeq_Transform.GetNumberOfDataNodes()
+        arrSeq_NormFeatureVec16 = np.zeros([num_DataNodes, 16], dtype = float) # 16: flattened Mat4x4
+        for idx_DataNode in range(num_DataNodes):
+            node_LinearTransform = nodeSeq_Transform.GetNthDataNode(idx_DataNode)
+            # 01. Get vtkMat4x4
+            mat4x4_SonixTablet_2_World = vtk.vtkMatrix4x4()
+            node_LinearTransform.GetMatrixTransformToWorld(mat4x4_SonixTablet_2_World)
+            # 02. Get arr_Mat4x4, the init arr_NormFeatureVec16 from vtkMat4x4
+            vec_NormFeatureVec16 = np.zeros([16])
+            mat4x4_SonixTablet_2_World.DeepCopy(vec_NormFeatureVec16, mat4x4_SonixTablet_2_World)
+            # 03. Get Normalize arr_Mat4x4 to get arr_NormFeatureVec16
+            vec_NormFeatureVec16[[3, 7, 11]] *= 0.01   # Rescale the translation value, divide by 100 to reduce the loss
+            # 04. Fill up arrSeq_NormFeatureVec16
+            arrSeq_NormFeatureVec16[idx_DataNode] = vec_NormFeatureVec16
+
+        return arrSeq_NormFeatureVec16
+
+    # ------------------------------------------------------------------------------------------------------------------
+    def obtainNodeSeq_GivenProxyNodeName(self, nodeSeqBrowser, str_ProxyNodename):
+        """ **Logic.obtainArr_NumpyLandmark_OneSequence(self, nodeSeqBrowser) """''''''
+        # 00. No landmarks to generate if the SeqBrowser_Selected does not contain the sequence of Landmarks
+        if self.hasLandmarks_inTargetNode_SeqBrowser(nodeSeqBrowser) == False:
+            raise ValueError('SL_Alert! Should not be called if no landmarks'); return None
+        # 01. Get nodeSeq using str_ProxyNodename       then    check validity
+        nodeSeq = nodeSeqBrowser.GetSequenceNode(slicer.util.getNode(str_ProxyNodename))
+        if nodeSeqBrowser.GetNumberOfItems() != nodeSeq.GetNumberOfDataNodes():
+            raise ValueError(f'nodeSeq \t{nodeSeq.GetID()}.GetNumberOfDataNodes() = {nodeSeq.GetNumberOfDataNodes()}')
+            return None
+
+        return nodeSeq
 
     # ------------------------------------------------------------------------------------------------------------------
     def createNewNode_SequenceLandmarks(self, nodeSeqBrowser, node_SeqBrowserProxy_Landmarks):
@@ -1618,12 +1675,23 @@ class sl_01__LaminaLandmark_LabelingLogic(ScriptedLoadableModuleLogic):
         if str_LandmarkCurveType_Target == STR_LandmarkType_LeftLamina:
             nodeSeqBrowser_Target.SetNodeReferenceID(STR_CurveNode_RefRole_LeftLamina, nodeLandmarkCurve_Target.GetID())
             func_obtainStr_LandmarkLabel = self.obtainStr_LandmarkLabel_LeftLamina
+            arr_SelectedColor = np.array([255, 6, 243]) / 255.0
+            int_CurveType =  slicer.vtkCurveGenerator().CURVE_TYPE_CARDINAL_SPLINE
         elif str_LandmarkCurveType_Target == STR_LandmarkType_RightLamina:
             nodeSeqBrowser_Target.SetNodeReferenceID(STR_CurveNode_RefRole_RightLamina,nodeLandmarkCurve_Target.GetID())
             func_obtainStr_LandmarkLabel = self.obtainStr_LandmarkLabel_RightLamina
+            arr_SelectedColor = np.array([255, 6, 243]) / 255.0
+            int_CurveType = slicer.vtkCurveGenerator().CURVE_TYPE_CARDINAL_SPLINE
         elif str_LandmarkCurveType_Target == STR_LandmarkCurveType_SpinalCord:
             nodeSeqBrowser_Target.SetNodeReferenceID(STR_CurveNode_RefRole_SpinalCord, nodeLandmarkCurve_Target.GetID())
             func_obtainStr_LandmarkLabel = self.obtainStr_CurveControlPointLabel_SpinalCord
+            arr_SelectedColor = np.array([102, 255, 0]) / 255.0
+            int_CurveType = slicer.vtkCurveGenerator().CURVE_TYPE_POLYNOMIAL
+
+            nodeDiaplay_LandmarkCurve = nodeLandmarkCurve_Target.GetDisplayNode()
+            nodeDiaplay_LandmarkCurve.GetTextProperty().ShadowOff()
+            nodeDiaplay_LandmarkCurve.SetLineThickness(0.85)
+            nodeDiaplay_LandmarkCurve.SetActiveColor(np.array([255, 6, 243]) / 255.0)
         else:
             raise ValueError(f'Wrong str_LandmarkCurveType_Target = {str_LandmarkCurveType_Target}')
         # print(f'TimeCost A = {time.time() - anchor: .04f}s'); anchor = time.time()
@@ -1654,6 +1722,12 @@ class sl_01__LaminaLandmark_LabelingLogic(ScriptedLoadableModuleLogic):
             # 06. Set attribute:  Visibility.   Show curve only if more than 2 ControlPoints
             nodeLandmarkCurve_Target.SetAttribute(STR_AttriName_isCurve3PointsDisplay, STR_TRUE)   # By default, Set True
             self.updateVisibility_LandmarkCurve_Target(nodeLandmarkCurve_Target)   # Show curve only if more than 2 ControlPoints
+
+            # 07. Update Curve DisplayNode
+            nodeDiaplay_LandmarkCurve = nodeLandmarkCurve_Target.GetDisplayNode()
+            nodeDiaplay_LandmarkCurve.SetSelectedColor(arr_SelectedColor)
+            nodeDiaplay_LandmarkCurve.SetGlyphScale(1)
+            nodeLandmarkCurve_Target.SetCurveType(int_CurveType)
 
         print(f'\tCreate CurveLandmark \t{nodeLandmarkCurve_Target.GetName()}: ID = {nodeLandmarkCurve_Target.GetID()}')
         # 07. Set up DisplayNode    &   Attach Mouse Hover Observer
@@ -1746,6 +1820,15 @@ class sl_01__LaminaLandmark_LabelingLogic(ScriptedLoadableModuleLogic):
         # 03. Grant ModuleSingleton:     Add Reference to the ParameterNode ->  trigger updateGUIFromParameterNode
         self.getParameterNode().SetNodeReferenceID(STR_pListNode_RefRole_LandmarkProxy, nodePointList_SeqBrowserProxy_Landmarks.GetID())
 
+        # 04. Setup the display node, to make more beautiful
+        nodeDiaplay_ProxyLandmark = nodePointList_SeqBrowserProxy_Landmarks.GetDisplayNode()
+        nodeDiaplay_ProxyLandmark.SetSelectedColor(np.array([255, 5, 9]) / 255.0)
+        nodeDiaplay_ProxyLandmark.SetGlyphScale(1.25)
+        nodeDiaplay_ProxyLandmark.SetTextScale(3.9)
+        nodeDiaplay_ProxyLandmark.GetTextProperty().SetFontFamilyToTimes()
+        nodeDiaplay_ProxyLandmark.GetTextProperty().ItalicOn()
+        nodeDiaplay_ProxyLandmark.GetTextProperty().BoldOn()
+        nodeDiaplay_ProxyLandmark.GetTextProperty().ShadowOff()
         return nodePointList_SeqBrowserProxy_Landmarks
 
     # ------------------------------------------------------------------------------------------------------------------
@@ -2173,21 +2256,26 @@ class sl_01__LaminaLandmark_LabelingLogic(ScriptedLoadableModuleLogic):
 
     # ------------------------------------------------------------------------------------------------------------------
     def onLandmarkCurve_DisplayModified(self, nodeDiaplay_CallerCurve=None, event=None):
+        ''' **Logic.onLandmarkCurve_DisplayModified(self, nodeDiaplay_CallerCurve=None, event=None) ''' ''''''
         int_ActiveComponentType = nodeDiaplay_CallerCurve.GetActiveComponentType()
-
+        nMS_SeqBrowserProxy_Landmarks = self.getParameterNode().GetNodeReference(STR_pListNode_RefRole_LandmarkProxy)
+        nodeDisplay_ProxyLandmarks = nMS_SeqBrowserProxy_Landmarks.GetDisplayNode()
         if int_ActiveComponentType == slicer.vtkMRMLMarkupsDisplayNode.ComponentNone:
             # Reset everything
             slicer.util.getFirstNodeByClassByName("vtkMRMLSliceNode", "Red").SetSliceVisible(True)  # Display 2D Scan
+            nodeDisplay_ProxyLandmarks.SetVisibility3D(True)
             nodeDiaplay_CallerCurve.SetPropertiesLabelVisibility(False)     # Hide Curve's Name
             nodeDiaplay_CallerCurve.SetPointLabelsVisibility(False)         # Hide ControlPoints' Label
         elif int_ActiveComponentType == slicer.vtkMRMLMarkupsDisplayNode.ComponentControlPoint:
             nodeDiaplay_CallerCurve.SetPointLabelsVisibility(True)          # Show ControlPoints' Label
             nodeDiaplay_CallerCurve.SetPropertiesLabelVisibility(False)     # Hide Curve's Name
             slicer.util.getFirstNodeByClassByName("vtkMRMLSliceNode", "Red").SetSliceVisible(False)  # Hide 2D Scan
+            nodeDisplay_ProxyLandmarks.SetVisibility3D(False)
         elif int_ActiveComponentType == slicer.vtkMRMLMarkupsDisplayNode.ComponentLine:
             nodeDiaplay_CallerCurve.SetPropertiesLabelVisibility(True)  # Show Curve's Name
             nodeDiaplay_CallerCurve.SetPointLabelsVisibility(False)     # Hide ControlPoints' Label
             slicer.util.getFirstNodeByClassByName("vtkMRMLSliceNode", "Red").SetSliceVisible(False)  # Hide 2D Scan
+            nodeDisplay_ProxyLandmarks.SetVisibility3D(False)
         else:
             print(f'**Logic.onLandmarkCurve_DisplayModified():  \tint_ActiveComponentType = {int_ActiveComponentType}')
 
