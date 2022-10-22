@@ -102,7 +102,7 @@ Valid_ColIdx_End	= 470
 Valid_RowIdx_Start 	= 1
 Valid_RowIdx_End	= 478
 
-# ------------------------------------------------------------------------------------------------------------------
+
 '''=================================================================================================================='''
 #
 # sl_01__LaminaLandmark_Labeling
@@ -364,17 +364,17 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
     # ------------------------------------------------------------------------------------------------------------------
     def checkLastControlPoint_And_RemoveNonPositionDefined(self, nodeSeqBrowser_Selected):
         # 01. Remove ControlPoint if applicable (not PositionDefined)
-        proxyNode_Landmark = nodeSeqBrowser_Selected.GetNodeReference(STR_pListNode_RefRole_LandmarkProxy)
-        if proxyNode_Landmark:
-            num_ControlPoint = proxyNode_Landmark.GetNumberOfControlPoints()
-            if num_ControlPoint > 0 and proxyNode_Landmark.GetNthControlPointPositionStatus(num_ControlPoint - 1)  \
+        proxyNode_Landmarks = nodeSeqBrowser_Selected.GetNodeReference(STR_pListNode_RefRole_LandmarkProxy)
+        if proxyNode_Landmarks:
+            num_ControlPoint = proxyNode_Landmarks.GetNumberOfControlPoints()
+            if num_ControlPoint > 0 and proxyNode_Landmarks.GetNthControlPointPositionStatus(num_ControlPoint - 1)  \
                         != slicer.vtkMRMLMarkupsNode.PositionDefined:
                 # 01-A. Remove Sequential   Preview ControlPoint
-                nodePointList_Sequential_curFrame = self.logic.obtainDataNode_CurSelected(nodeSeqBrowser_Selected, proxyNode_Landmark)
-                if nodePointList_Sequential_curFrame.GetNumberOfControlPoints() == proxyNode_Landmark.GetNumberOfControlPoints():
+                nodePointList_Sequential_curFrame = self.logic.obtainDataNode_CurSelected(nodeSeqBrowser_Selected, proxyNode_Landmarks)
+                if nodePointList_Sequential_curFrame.GetNumberOfControlPoints() == proxyNode_Landmarks.GetNumberOfControlPoints():
                     nodePointList_Sequential_curFrame.RemoveNthControlPoint(num_ControlPoint - 1)
                 # 01-B. Remove proxy        Preview ControlPoint
-                proxyNode_Landmark.RemoveNthControlPoint(num_ControlPoint - 1)
+                proxyNode_Landmarks.RemoveNthControlPoint(num_ControlPoint - 1)
 
                         
     def onShortCutKeyBoardClicked_Left(self):
@@ -550,20 +550,20 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
     def debugOnly_Get_isNegativeFrame(self, idx_TargetFrame= 440):
         nodeSeqBrowser_Target = slicer.util.getNode('SeqBrowser_1__S_LT__snS')
         if self.ui_HasLandmarks_uiCollapsibleButtonUpdateNeeded(nodeSeqBrowser_Target):
-            proxyNode_Landmark = slicer.util.getNode('Proxy_pList_Landmarks')
-            nodeSeq_Target = nodeSeqBrowser_Target.GetSequenceNode(proxyNode_Landmark)
+            proxyNode_Landmarks = slicer.util.getNode('Proxy_pList_Landmarks')
+            nodeSeq_Target = nodeSeqBrowser_Target.GetSequenceNode(proxyNode_Landmarks)
             nodePointList_Sequential_curFrame = nodeSeq_Target.GetNthDataNode(idx_TargetFrame)
             isNegative = nodePointList_Sequential_curFrame.GetAttribute(STR_AttriName_NodePointList_isNegativeFrame)
             return f'{nodeSeqBrowser_Target.GetID()}    \tidx_TargetFrame {idx_TargetFrame}  \t isNegative =  {isNegative})'
     # ------------------------------------------------------------------------------------------------------------------
     # ------------------------------------------------------------------------------------------------------------------
-    def onPointPositionDefined_Proxy(self, proxyNode_Landmark=None, event=None):
+    def onPointPositionDefined_Proxy(self, proxyNode_Landmarks=None, event=None):
         # 00-A. Check Singleton ParameterNode: important test for every NodeChange Slot, in case of onSceneStartClose()
         #       Check _updatingGUIFromParameterNode:  avoid bugs introduced by Slicer (PointAdded, PointPositionDefined)
         if self._parameterNode is None or self._updatingGUIFromParameterNode:
             return
         # 00-B. Check if there is a real ControlPoint dropped manually; ProxyNode-Seq-AutoUpdate can also trigger event
-        num_ControlPoints = proxyNode_Landmark.GetNumberOfControlPoints()
+        num_ControlPoints = proxyNode_Landmarks.GetNumberOfControlPoints()
         print(f"\n\t**Widget.onPointPositionDefined_Proxy(self), \tnum_ControlPoints = {num_ControlPoints}")
         if num_ControlPoints == 0:
             # This means the event was triggered by ProxyNode-Seq-AutoUpdate, no need to continue
@@ -571,27 +571,27 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
 
         # 01. SetFalse to Attribute isNegative CheckBox value to Attribute
         nodeSeqBrowser_Selected = self._parameterNode.GetNodeReference(STR_SeqBrowserNode_RefRole_Selected)
-        nodePointList_Sequential_curFrame = self.logic.obtainDataNode_CurSelected(nodeSeqBrowser_Selected, proxyNode_Landmark)
+        nodePointList_Sequential_curFrame = self.logic.obtainDataNode_CurSelected(nodeSeqBrowser_Selected, proxyNode_Landmarks)
         if self.logic.get_isSwitchingSeqBrowser():
             # SL_Notes: during onSelectedNodeChanged() step SetFalse_Empty, Slicer will AddPoint
             #               to proxyNode and lead to PointPositionDefinedEvent, thus here.
             print(f'\n\nisSwitchingSeqBrowser !! SwitchingSeqBrowser!! SwitchingSeqBrowser!!!\n\n')
-            proxyNode_Landmark.RemoveAllControlPoints()
+            proxyNode_Landmarks.RemoveAllControlPoints()
         else:
-            #       01-A.   Save Attribute for proxyNode_Landmark
-            proxyNode_Landmark.SetAttribute(STR_AttriName_NodePointList_isNegativeFrame, STR_FALSE)
+            #       01-A.   Save Attribute for proxyNode_Landmarks
+            proxyNode_Landmarks.SetAttribute(STR_AttriName_NodePointList_isNegativeFrame, STR_FALSE)
             #       01-B.   Save Attribute for Sequential_nodePointList
             nodePointList_Sequential_curFrame.SetAttribute(STR_AttriName_NodePointList_isNegativeFrame, STR_FALSE)
 
         # 02. Remove the OldExisted PositionDefined Landmarks (ControlPoints) to let the latest be the Landmark
-        # 02-A. Remove from proxyNode_Landmark:
-        self.removeOldExistingLandmarks_from_TargetPointList(proxyNode_Landmark)
+        # 02-A. Remove from proxyNode_Landmarks:
+        self.removeOldExistingLandmarks_from_TargetPointList(proxyNode_Landmarks)
         # 02-B. Remove from Sequential nodePointList: same procedure, just in case the SaveChanges is not triggered!
         self.removeOldExistingLandmarks_from_TargetPointList(nodePointList_Sequential_curFrame, 'SL__Sequential')
 
         # # 03. If isUserLabeling, we need to add the same ControlPoint to corresponding LandmarkCurve!
         if self.logic.isUserLabeling_InteractionSingleton_PlaceMode():
-            self.logic.updateCurves_FrameLandmarks__on_ProxyControlPointUpdate(nodeSeqBrowser_Selected, proxyNode_Landmark)
+            self.logic.updateCurves_FrameLandmarks__on_ProxyControlPointUpdate(nodeSeqBrowser_Selected, proxyNode_Landmarks)
 
         # 04. Update uiLabel_LandmarkPosition_curFrame for the newly added ControlPoint
         if self.parent.isEntered:
@@ -629,7 +629,7 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
                     print(f'\t\tRemoved idx_ControlPoint = {idx_ControlPoint}, PointList_NodeType = {strNote_PointListType}\n\n')
 
     # ------------------------------------------------------------------------------------------------------------------
-    def onPointStartInteraction_Proxy(self, proxyNode_Landmark=None, event=None):
+    def onPointStartInteraction_Proxy(self, proxyNode_Landmarks=None, event=None):
         print("\t**Widget.PointStartInteractionEvent(self, nodePointList, event), SL_Proxy"); test = 0; test += 1
         # 00-A. If not this module, no need to uiUpdate
         if not self.parent.isEntered:
@@ -663,10 +663,10 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
             list_RAS_World_Mouse = [0, 0, 0]
             node_CrossHair.GetCursorPositionRAS(list_RAS_World_Mouse)
             #   II-02-B. Determine the idx_ControlPoint_MousePicked, and set attribute!
-            idx_ControlPoint_MousePicked = proxyNode_Landmark.GetClosestControlPointIndexToPositionWorld(list_RAS_World_Mouse)
-            proxyNode_Landmark.SetAttribute(STR_AttriName__Idx_ControlPoint_MousePicked, str(idx_ControlPoint_MousePicked))
+            idx_ControlPoint_MousePicked = proxyNode_Landmarks.GetClosestControlPointIndexToPositionWorld(list_RAS_World_Mouse)
+            proxyNode_Landmarks.SetAttribute(STR_AttriName__Idx_ControlPoint_MousePicked, str(idx_ControlPoint_MousePicked))
             #   II-02-C. Determine and Update the  uiLabel's  background
-            str_ControPoint_MousePicked = proxyNode_Landmark.GetNthControlPointLabel(idx_ControlPoint_MousePicked)
+            str_ControPoint_MousePicked = proxyNode_Landmarks.GetNthControlPointLabel(idx_ControlPoint_MousePicked)
             if STR_ControlPointLabelPrefix_Left in str_ControPoint_MousePicked:
                 self.ui.label__Left_IJ__curFrame.setStyleSheet(STR_QLabel_StyleSheet_onLandmarkMouseDrag)
             elif STR_ControlPointLabelPrefix_Right in str_ControPoint_MousePicked:
@@ -680,7 +680,7 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
         self._updatingGUIFromParameterNode = False
 
     # ------------------------------------------------------------------------------------------------------------------
-    def onPointEndInteraction_Proxy(self, proxyNode_Landmark=None, event=None):
+    def onPointEndInteraction_Proxy(self, proxyNode_Landmarks=None, event=None):
         print("\t**Widget.onPointEndInteraction_Proxy(self, nodePointList, event), SL_Proxy"); test = 0; test += 1
         # 00-A. Check Singleton ParameterNode: important test for every NodeChange Slot, in case of onSceneStartClose()
         #       Check _updatingGUIFromParameterNode:  avoid bugs introduced by Slicer (PointAdded, PointPositionDefined)
@@ -689,7 +689,7 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
 
         # 01. Update the Landmark_Curves
         nodeSeqBrowser_Selected = self._parameterNode.GetNodeReference(STR_SeqBrowserNode_RefRole_Selected)
-        self.logic.updateCurves_FrameLandmarks__on_ProxyControlPointUpdate(nodeSeqBrowser_Selected, proxyNode_Landmark)
+        self.logic.updateCurves_FrameLandmarks__on_ProxyControlPointUpdate(nodeSeqBrowser_Selected, proxyNode_Landmarks)
 
         # 02. If not this module, no need to uiUpdate
         if not self.parent.isEntered:
@@ -701,8 +701,8 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
         #   II-03. Update Landmark-Position
         self.uiUpdate_LandmarkPositionPanel_TargetFrame(STR_FRAME_TYPE_CURRENT)
         #   II-04. Recover BackgroundColor of the Label corresponds to MousePicked ControlPoint
-        idx_ControlPoint_MousePicked = int(proxyNode_Landmark.GetAttribute(STR_AttriName__Idx_ControlPoint_MousePicked))
-        str_ControPoint_MousePicked = proxyNode_Landmark.GetNthControlPointLabel(idx_ControlPoint_MousePicked)
+        idx_ControlPoint_MousePicked = int(proxyNode_Landmarks.GetAttribute(STR_AttriName__Idx_ControlPoint_MousePicked))
+        str_ControPoint_MousePicked = proxyNode_Landmarks.GetNthControlPointLabel(idx_ControlPoint_MousePicked)
         if STR_ControlPointLabelPrefix_Left in str_ControPoint_MousePicked:
             self.ui.label__Left_IJ__curFrame.setStyleSheet('')
         elif STR_ControlPointLabelPrefix_Right in str_ControPoint_MousePicked:
@@ -982,7 +982,7 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
         # 01. For case hasLandmarks
         if self.logic.hasLandmarks_inTargetNode_SeqBrowser(nodeSeqBrowser):
             return True
-        # 02. No nodeSeqBrowser_Selected, or No proxyNode_Landmark found in nodeSeqBrowser_Selected:    SetDefault
+        # 02. No nodeSeqBrowser_Selected, or No proxyNode_Landmarks found in nodeSeqBrowser_Selected:    SetDefault
         self.uiSetDefault_All_LandmarkPositionPanels_inCollapsibleButton()  # II. In-Brace: uiUpdate
         return False
 
@@ -1072,7 +1072,7 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
             self.logic.updateCurves_UnsetTargetFrameLandmark(nodeSeqBrowser_Selected, idx_CurFrame)
             print(f'\t\t\tRemoveAllControlPoints()')
 
-        # 04. uiUpdate for LandmarkPositionLabels_curFrame (set -1 for both Left/Right labels)
+        # 04. uiUpdate for LandmarkPositionLabels_curFrame (if checked, set -1 for both Left/Right labels)
         print(f'\tI. End of CheckBox_Clicked, now we Update curFrame \t STR_FRAME_TYPE_CURRENT')
         self._updatingGUIFromParameterNode = True  # I. Open-Brace:  Avoid updateParameterNodeFromGUI__ (infinite loop)
         self.uiUpdate_LandmarkPositionPanel_TargetFrame(strFrameType=STR_FRAME_TYPE_CURRENT) # II. In-Brace: uiUpdate
@@ -1102,16 +1102,57 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
 
     # ------------------------------------------------------------------------------------------------------------------
     def onPushButton_DeleteLeft_Clicked(self):
-        print("**Widget.onPushButton_DeleteLeft_Clicked(self), \tSL_Developer, F-Slot"); test = 0; test += 1
-        pass
+        print("**Widget.onPushButton_DeleteLeft_Clicked(self), \tSL_Developer")
+        # 01. Remove the left landmark if applicable
+        is_uiUpdateNeeded = self.logic.removeTargetLandmark_fromActiveFrame(STR_ControlPointLabelPrefix_Left)
 
-    def onPushButton_DeleteFrameLandmark_Clicked(self):
-        print("**Widget.onPushButton_DeleteFrameLandmark_Clicked(self), \tSL_Developer, F-Slot"); test = 0; test += 1
-        pass
+        # 02. If removed, uiUpdate for LandmarkPositionLabels_curFrame (set N/A for both Left/Right labels)
+        if is_uiUpdateNeeded:
+            print('\nThe left landmark should have been removed! \n')
+            self._updatingGUIFromParameterNode = True  # I. Open-Brace:  Avoid updateParameterNodeFromGUI__ (infinite loop)
+            self.uiUpdate_LandmarkPositionPanel_TargetFrame(strFrameType=STR_FRAME_TYPE_CURRENT)  # II. In-Brace: uiUpdate
+            self._updatingGUIFromParameterNode = False  # III. Close-Brace: All the GUI updates are done;
+
 
     def onPushButton_DeleteRight_Clicked(self):
-        print("**Widget.onPushButton_DeleteRight_Clicked(self), \tSL_Developer, F-Slot"); test = 0; test += 1
-        pass
+        print("**Widget.onPushButton_DeleteRight_Clicked(self), \tSL_Developer")
+        # 01. Remove the right landmark if applicable
+        is_uiUpdateNeeded = self.logic.removeTargetLandmark_fromActiveFrame(STR_ControlPointLabelPrefix_Right)
+
+        # 02. If removed, uiUpdate for LandmarkPositionLabels_curFrame (set N/A for both Left/Right labels)
+        if is_uiUpdateNeeded:
+            print('\nThe right landmark should have been removed! \n')
+            self._updatingGUIFromParameterNode = True  # I. Open-Brace:  Avoid updateParameterNodeFromGUI__ (infinite loop)
+            self.uiUpdate_LandmarkPositionPanel_TargetFrame(strFrameType=STR_FRAME_TYPE_CURRENT)  # II. In-Brace: uiUpdate
+            self._updatingGUIFromParameterNode = False  # III. Close-Brace: All the GUI updates are done;
+
+
+    def onPushButton_DeleteFrameLandmark_Clicked(self):
+        print("**Widget.onPushButton_DeleteFrameLandmark_Clicked(self), \tSL_Developer")
+        # 00. No landmarks to delete if the SeqBrowser_Selected does not contain the sequence of Landmarks
+        nodeSeqBrowser_Selected = self._parameterNode.GetNodeReference(STR_SeqBrowserNode_RefRole_Selected)
+        if self.logic.hasLandmarks_inTargetNode_SeqBrowser(nodeSeqBrowser_Selected) == False:
+            print("No Landmark exists!")
+            return
+        # 01. Get   proxyNode_Landmarks  &   nodeSeq_Landmarks
+        proxyNode_Landmarks = nodeSeqBrowser_Selected.GetNodeReference(STR_pListNode_RefRole_LandmarkProxy)
+        nodePointList_Sequential_curFrame = self.logic.obtainDataNode_CurSelected(nodeSeqBrowser_Selected,
+                                                                                  proxyNode_Landmarks)
+        # 02. Remvoe all ControlPoints               for both  proxyNode_Landmarks  &  nodePointList_Sequential_curFrame
+        proxyNode_Landmarks.RemoveAllControlPoints()
+        nodePointList_Sequential_curFrame.RemoveAllControlPoints()
+        # 03. SetAttribute (N/A instead of Negative) for both  proxyNode_Landmarks  &  nodePointList_Sequential_curFrame
+        proxyNode_Landmarks.SetAttribute(STR_AttriName_NodePointList_isNegativeFrame, STR_FALSE)
+        nodePointList_Sequential_curFrame.SetAttribute(STR_AttriName_NodePointList_isNegativeFrame, STR_FALSE)
+        # 04. Unset TargetFrameLandmark for Landmark_Curves:    Unset + UpdateVisibility
+        idx_CurFrame = nodeSeqBrowser_Selected.GetSelectedItemNumber()
+        self.logic.updateCurves_UnsetTargetFrameLandmark(nodeSeqBrowser_Selected, idx_CurFrame)
+        print(f'\t\t\tRemoveAllControlPoints()')
+        # 05. uiUpdate for LandmarkPositionLabels_curFrame (set N/A for both Left/Right labels)
+        self._updatingGUIFromParameterNode = True  # I. Open-Brace:  Avoid updateParameterNodeFromGUI__ (infinite loop)
+        self.uiUpdate_LandmarkPositionPanel_TargetFrame(
+            strFrameType=STR_FRAME_TYPE_CURRENT)  # II. In-Brace: uiUpdate
+        self._updatingGUIFromParameterNode = False  # III. Close-Brace: All the GUI updates are done;
 
     # ------------------------------------------------------------------------------------------------------------------
     def startPlaceControlPoint_SeqBrowserProxy_Landmarks(self, bool_Persistent = False):
@@ -1119,7 +1160,7 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
         if nodeSeqBrowser_Selected:
             # I. Before  updating the SingleTon ParameterNode; Disable Modify events, e.g., vtk.vtkCommand.ModifiedEvent
             wasModified = self._parameterNode.StartModify()  # Modify all properties in a single batch
-            # --------------------------------------------------------------------------------------------------------------
+            # ----------------------------------------------------------------------------------------------------------
             # II. Update the SingleTon ParameterNode; No updateGUIFromParameterNode triggered in this step
             #       II-01. Get :                node_SeqBrowserProxy_Landmarks,  the PointList_ProxyNode for Landmarks
             node_SeqBrowserProxy_Landmarks = self.getSafe_ProxyLandmarks_TargetSeqBrowser__paramNodeUpdate(nodeSeqBrowser_Selected)
@@ -1128,7 +1169,7 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
             #       II-03. Trigger the MarkUp ControlPoint-Drop function, so users
             #                   can manually drop a ControlPoint and add to CurrentActive (curFrame) MarkUp-PointList
             slicer.modules.markups.logic().StartPlaceMode(bool_Persistent)
-            # --------------------------------------------------------------------------------------------------------------
+            # ----------------------------------------------------------------------------------------------------------
             # III. After   updating the SingleTon ParameterNode; Enable Modify events, e.g., vtk.vtkCommand.ModifiedEvent
             self._parameterNode.EndModify(wasModified)
         else:
@@ -1493,9 +1534,9 @@ class sl_01__LaminaLandmark_LabelingLogic(ScriptedLoadableModuleLogic):
     # ------------------------------------------------------------------------------------------------------------------
     def hasLandmarks_inTargetNode_SeqBrowser(self, nodeSeqBrowser) -> bool:
         if nodeSeqBrowser:
-            proxyNode_Landmark = nodeSeqBrowser.GetNodeReference(STR_pListNode_RefRole_LandmarkProxy)
-            if proxyNode_Landmark:
-                nodeSeq_Landmarks = nodeSeqBrowser.GetSequenceNode(proxyNode_Landmark)
+            proxyNode_Landmarks = nodeSeqBrowser.GetNodeReference(STR_pListNode_RefRole_LandmarkProxy)
+            if proxyNode_Landmarks:
+                nodeSeq_Landmarks = nodeSeqBrowser.GetSequenceNode(proxyNode_Landmarks)
                 if nodeSeq_Landmarks and nodeSeqBrowser.GetNumberOfItems() == nodeSeq_Landmarks.GetNumberOfDataNodes():
                     return True
                 else:
@@ -2097,6 +2138,63 @@ class sl_01__LaminaLandmark_LabelingLogic(ScriptedLoadableModuleLogic):
         self.updateVisibility_LandmarkCurve_Target(nodeCurve_SpinalCord)  # Check if more than 2 ControlPoints
 
     # ------------------------------------------------------------------------------------------------------------------
+    def removeTargetLandmark_fromActiveFrame(self, str_LandmarkPrefix) -> bool:
+        ''' **Logic.removeTargetLandmark_fromActiveFrame(self, str_LandmarkPrefix) ''' #
+        is_uiUpdateNeeded = False
+        # 00. No landmarks to delete if the SeqBrowser_Selected does not contain the sequence of Landmarks
+        nodeSeqBrowser_Selected = self.getParameterNode().GetNodeReference(STR_SeqBrowserNode_RefRole_Selected)
+        if self.hasLandmarks_inTargetNode_SeqBrowser(nodeSeqBrowser_Selected) == False:
+            print("No Landmark exists!")
+            return is_uiUpdateNeeded
+        
+        # 01. SetAttribute (N/A instead of Negative) for both  proxyNode_Landmarks  &  nodePointList_Sequential_curFrame
+        proxyNode_Landmarks = nodeSeqBrowser_Selected.GetNodeReference(STR_pListNode_RefRole_LandmarkProxy)
+        nodePointList_Sequential_curFrame = self.obtainDataNode_CurSelected(nodeSeqBrowser_Selected, proxyNode_Landmarks)
+        if proxyNode_Landmarks.GetAttribute(STR_AttriName_NodePointList_isNegativeFrame) == STR_TRUE:
+            proxyNode_Landmarks.SetAttribute(STR_AttriName_NodePointList_isNegativeFrame, STR_FALSE)
+            nodePointList_Sequential_curFrame.SetAttribute(STR_AttriName_NodePointList_isNegativeFrame, STR_FALSE)
+            is_uiUpdateNeeded = True
+            return is_uiUpdateNeeded
+
+        # 02. Check num_ControlPoints   for both    proxyNode_Landmarks  &   nodeSeq_Landmarks
+        num_ControlPoints = proxyNode_Landmarks.GetNumberOfControlPoints()
+        assert num_ControlPoints >= 0 and num_ControlPoints == nodePointList_Sequential_curFrame.GetNumberOfControlPoints(), \
+            f'SL_Alert! num_ControlPoints = {num_ControlPoints}'
+        if num_ControlPoints == 0:      print("No landmark to in current frame!");  return is_uiUpdateNeeded
+
+        # 03. Check if the target LandmarkPrefix exists in the active PointList
+        for idx_ControlPoint in range(num_ControlPoints):
+            if str_LandmarkPrefix in proxyNode_Landmarks.GetNthControlPointLabel(idx_ControlPoint):
+                # 03-A. Remove the ControlPoint from    proxyNode_Landmarks
+                proxyNode_Landmarks.RemoveNthControlPoint(idx_ControlPoint)
+                # 03-B. Remove the ControlPoint from    nodePointList_Sequential_curFrame
+                if str_LandmarkPrefix in nodePointList_Sequential_curFrame.GetNthControlPointLabel(idx_ControlPoint):
+                    nodePointList_Sequential_curFrame.RemoveNthControlPoint(idx_ControlPoint)
+
+                # 04. Unset TargetFrameLandmark for Landmark_Curves:    Unset + UpdateVisibility
+                #       04-A. Get   nodeCurve_Target
+                if str_LandmarkPrefix == STR_ControlPointLabelPrefix_Left:
+                    nodeCurve_Target = nodeSeqBrowser_Selected.GetNodeReference(STR_CurveNode_RefRole_LeftLamina)
+                elif str_LandmarkPrefix == STR_ControlPointLabelPrefix_Right:
+                    nodeCurve_Target = nodeSeqBrowser_Selected.GetNodeReference(STR_CurveNode_RefRole_RightLamina)
+                else:
+                    raise ValueError(f'str_LandmarkPrefix = {str_LandmarkPrefix}')  # Should not be SpinalCord
+                #       04-B. Get   nodeCurve_SpinalCord        &      idx_CurFrame
+                nodeCurve_SpinalCord = nodeSeqBrowser_Selected.GetNodeReference(STR_CurveNode_RefRole_SpinalCord)
+                idx_CurFrame = nodeSeqBrowser_Selected.GetSelectedItemNumber()
+                #       04-C. Unset   ControlPoint      for both     nodeCurve_Target   &   nodeCurve_SpinalCord
+                nodeCurve_Target.UnsetNthControlPointPosition(idx_CurFrame)
+                nodeCurve_SpinalCord.UnsetNthControlPointPosition(idx_CurFrame)
+                #       04-D. Update Visibility         for both    nodeCurve_Target   &   nodeCurve_SpinalCord
+                self.updateVisibility_LandmarkCurve_Target(nodeCurve_Target)        # Check if more than 2 ControlPoints
+                self.updateVisibility_LandmarkCurve_Target(nodeCurve_SpinalCord)    # Check if more than 2 ControlPoints
+
+                is_uiUpdateNeeded = True
+                return is_uiUpdateNeeded
+
+        return is_uiUpdateNeeded
+
+    # ------------------------------------------------------------------------------------------------------------------
     def updateCurves_FrameLandmarks__on_ProxyControlPointUpdate(self, nodeSeqBrowser_Target, nodePointList_Target):
         ''' **Logic.updateCurves_FrameLandmarks__on_ProxyControlPointUpdate(self, nodePointList_Target) 
                 This function update the Landmark_Curves using Cur-Frame-of-ControlPoints from nodePointList_Target.
@@ -2181,9 +2279,9 @@ class sl_01__LaminaLandmark_LabelingLogic(ScriptedLoadableModuleLogic):
     # ------------------------------------------------------------------------------------------------------------------
     # ---------------  Section VIII-03:     Slots      Functions          ----------------------------------------------
     # ------------------------------------------------------------------------------------------------------------------
-    def onPointAdded(self, proxyNode_Landmark=None, event=None):
+    def onPointAdded(self, proxyNode_Landmarks=None, event=None):
         ''' **Logic.onPointAdded(self, nodeTarget_SeqBrowser) 
-                Called everytime whenever proxyNode_Landmark got additional ControlPoint:
+                Called everytime whenever proxyNode_Landmarks got additional ControlPoint:
                     1. Added by user:           One DropLandmark button was triggered, and a ControlPoint was dropped;
                     2. Added by SequenceUpdate: Whenever the is a change of SewBrowser SelectedItem.      ''' ''''''
         # 00-A. Check the validity of nodeSeqBrowser_Selected
@@ -2208,42 +2306,42 @@ class sl_01__LaminaLandmark_LabelingLogic(ScriptedLoadableModuleLogic):
         idx_SliderCurFrame = self.obtain_idxSliderCurFrame_from_TargetSeqBrowser(nodeSeqBrowser_Selected)
         print(f"\t\t**Logic.onPointAdded(self, nodePointList), \t.SetSaveChanges(nodeSeq_Landmarks, True) \t idx_SliderCurFrame = {idx_SliderCurFrame}");
 
-        idx_NewlyAddedControlPoint = proxyNode_Landmark.GetNumberOfControlPoints() - 1
-        if proxyNode_Landmark.GetNthControlPointPositionStatus(idx_NewlyAddedControlPoint)  \
+        idx_NewlyAddedControlPoint = proxyNode_Landmarks.GetNumberOfControlPoints() - 1
+        if proxyNode_Landmarks.GetNthControlPointPositionStatus(idx_NewlyAddedControlPoint)  \
                         != slicer.vtkMRMLMarkupsNode.PositionDefined:
             # Change Label if not PositionDefined
             if self.getUserLandmarkLabeling_strLandmarkType() == STR_LandmarkType_LeftLamina:
-                proxyNode_Landmark.SetNthControlPointLabel(idx_NewlyAddedControlPoint,
+                proxyNode_Landmarks.SetNthControlPointLabel(idx_NewlyAddedControlPoint,
                         self.obtainStr_LandmarkLabel_LeftLamina(nodeSeqBrowser_Selected.GetName(), idx_SliderCurFrame))
             elif self.getUserLandmarkLabeling_strLandmarkType() == STR_LandmarkType_RightLamina:
-                proxyNode_Landmark.SetNthControlPointLabel(idx_NewlyAddedControlPoint,
+                proxyNode_Landmarks.SetNthControlPointLabel(idx_NewlyAddedControlPoint,
                         self.obtainStr_LandmarkLabel_RightLamina(nodeSeqBrowser_Selected.GetName(), idx_SliderCurFrame))
             elif self.getUserLandmarkLabeling_strLandmarkType() == STR_LabelButton_Sequential:
                 # Must use DefinedControlPoints, otherwise, preview ControlPoints can be counted.
-                num_DefinedLandmarks = proxyNode_Landmark.GetNumberOfDefinedControlPoints()
+                num_DefinedLandmarks = proxyNode_Landmarks.GetNumberOfDefinedControlPoints()
                 if num_DefinedLandmarks == 0 or num_DefinedLandmarks == len(LIST_LANDMARK_TYPE): # can be 0
-                    proxyNode_Landmark.SetNthControlPointLabel(idx_NewlyAddedControlPoint, \
+                    proxyNode_Landmarks.SetNthControlPointLabel(idx_NewlyAddedControlPoint, \
                         self.obtainStr_LandmarkLabel_LeftLamina(nodeSeqBrowser_Selected.GetName(), idx_SliderCurFrame))
                 elif num_DefinedLandmarks == 1:
-                    str_ExistedLandmarkLabel = proxyNode_Landmark.GetNthControlPointLabel(0)
+                    str_ExistedLandmarkLabel = proxyNode_Landmarks.GetNthControlPointLabel(0)
                     str_Existed_LabelPrefix, _ = self.obtain__LablePrefix_IdxFrame__from_ControlPointLabel(str_ExistedLandmarkLabel)
 
                     if str_Existed_LabelPrefix == STR_ControlPointLabelPrefix_Left:
-                        proxyNode_Landmark.SetNthControlPointLabel(idx_NewlyAddedControlPoint,  \
+                        proxyNode_Landmarks.SetNthControlPointLabel(idx_NewlyAddedControlPoint,  \
                             self.obtainStr_LandmarkLabel_RightLamina(nodeSeqBrowser_Selected.GetName(), idx_SliderCurFrame))
                     elif str_Existed_LabelPrefix == STR_ControlPointLabelPrefix_Right:
-                        proxyNode_Landmark.SetNthControlPointLabel(idx_NewlyAddedControlPoint,  \
+                        proxyNode_Landmarks.SetNthControlPointLabel(idx_NewlyAddedControlPoint,  \
                             self.obtainStr_LandmarkLabel_LeftLamina(nodeSeqBrowser_Selected.GetName(), idx_SliderCurFrame))
                     else:   raise ValueError(f'SL_Alert! str_Existed_LabelPrefix = {str_Existed_LabelPrefix}')
 
                 else:   raise ValueError(f'SL_Alert! num_Landmarks = {num_DefinedLandmarks}')
             else:
-                proxyNode_Landmark.SetNthControlPointLabel(idx_NewlyAddedControlPoint, f'Incorrect strLandmarkType!')
+                proxyNode_Landmarks.SetNthControlPointLabel(idx_NewlyAddedControlPoint, f'Incorrect strLandmarkType!')
                 raise ValueError(f'\n\n\t\tstr_TargetLandmarkType = {self.getUserLandmarkLabeling_strLandmarkType()}\n')
 
-    def onPointRemoved(self, proxyNode_Landmark=None, event=None):
+    def onPointRemoved(self, proxyNode_Landmarks=None, event=None):
         ''' Called when the UserLabeling cancelled (right clicked) a labeling step ''' ''''''
-        print(f'\t**Logic.onPointRemoved(self, proxyNode_Landmark=None, event=None)')
+        print(f'\t**Logic.onPointRemoved(self, proxyNode_Landmarks=None, event=None)')
 
     def AddObserver_SeqBrowserProxy_Landmarks(self, nodePointList_SeqBrowserProxy_Landmarks):
         nodePointList_SeqBrowserProxy_Landmarks.AddObserver(slicer.vtkMRMLMarkupsNode.PointAddedEvent,
