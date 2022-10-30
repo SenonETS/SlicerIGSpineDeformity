@@ -1,5 +1,8 @@
 # SlicerIGSpineDeformity: spine deformity analysis using freehand 3D ultrasound imaging
 
+## Extension Dependency:
+	### SlicerIGSIO, SlicerIGT, SlicerOpenIGTLink
+
 ## Module: Lamina Landmark Labeling
 ### UI figure
 <img src="https://github.com/SenonETS/SlicerIGSpineDeformity/blob/main/sl_01__LaminaLandmark_Labeling/SL_ScreenShot.PNG" alt="isolated" width="800"/>
