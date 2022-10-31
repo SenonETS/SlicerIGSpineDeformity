@@ -83,7 +83,7 @@ STR_QLabel_StyleSheet_Allert = "QLabel { background-color : rgb(255, 110, 110); 
 STR_QLabel_StyleSheet_onLandmarkMouseDrag = "QLabel { background-color : rgb(100, 255, 100); font: bold; }"
 
 # ------------------------------------------------------------------------------------------------------------------
-INT_DEFAULT_RAS_VALUE       = 999999
+INT_DEFAULT_RAS_VALUE       = -888888
 INT_NEGATIVE_RAS_VALUE      = -999999
 
 STR_NumpyLandmark_Var_I     = 'I_Row'       # row       address from    image bottom
@@ -102,7 +102,12 @@ Valid_ColIdx_End	= 470
 Valid_RowIdx_Start 	= 1
 Valid_RowIdx_End	= 478
 
+Valid_Total_Cols	= Valid_ColIdx_End - Valid_ColIdx_Start + 1
+Valid_Total_Rows 	= Valid_RowIdx_End - Valid_RowIdx_Start + 1
 
+NORM_ROW_GAPS = Valid_Total_Rows - 1
+NORM_COL_GAPS = Valid_Total_Cols - 1
+# ------------------------------------------------------------------------------------------------------------------
 '''=================================================================================================================='''
 #
 # sl_01__LaminaLandmark_Labeling
@@ -112,7 +117,7 @@ class sl_01__LaminaLandmark_Labeling(ScriptedLoadableModule):
     def __init__(self, parent):
         ScriptedLoadableModule.__init__(self, parent)
         self.parent.title = "Lamina Landmark Labeling"
-        self.parent.categories = ["SL_SpineUS"]         # Set categories (the module shows up in the module selector)
+        self.parent.categories = ["IGT"]         # Set categories (the module shows up in the module selector)
         self.parent.dependencies = ['Markups', 'Sequences']          # Add here list of module names that this module requires
         self.parent.contributors = ["Sen Li"]   # Replace with "Firstname Lastname (Organization)"
         # TODO:     10. update with a link to online module Tutorial
@@ -1226,6 +1231,14 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
         np.save(strFilePath_NumpySeqTransform, arrSeq_NormFeatureVec16)
         print(f'Saved arrSeq_NormFeatureVec16 to \n\t{strFilePath_NumpySeqTransform}')
 
+        # 07. Get   nodeSeq_Scan   ->  strFilePath_NumpySeqScan     for sequences that are edited
+        nodeSeq_2DScan = self.logic.obtainNodeSeq_GivenProxyNodeName(nodeSeqBrowser_Selected, STR_NodeName_SeqBrowserProxy_2DScan)
+        strFileName_NumpySeqScan = self.logic.obtainStr_FileName_NumpySeqScan(nodeSeq_2DScan.GetName())
+        strFilePath_NumpySeqScan = f'{self.logic.obtainStr_SceneFileFolder(nodeSeqBrowser_Selected)}/{strFileName_NumpySeqScan}'
+        arrSeq_Scan_SkinBottom_dim4 = self.logic.obtainArr_NumpySeqScan_SkinBottom_dim4(nodeSeq_2DScan)
+        np.save(strFilePath_NumpySeqScan, arrSeq_Scan_SkinBottom_dim4)
+        print(f'Saved arrSeq_Scan_SkinBottom_dim4 to \n\t{strFilePath_NumpySeqScan}')
+
     # ------------------------------------------------------------------------------------------------------------------
     def onPushButton_Load_SeqNumpyLandmarks_Clicked(self):
         print("**Widget.onPushButton_Load_SeqNumpyLandmarks_Clicked(self), \tSL_Developer")
@@ -1248,6 +1261,32 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
 
         # 03. Check file shape of the loaded numpy file
         arr_SeqNumpyLandmarks = np.load(strFilePath_NumpyLandmarks)
+        #-----------------------------------------------------
+        #   To be removed
+        if (arr_SeqNumpyLandmarks.ndim == 3 and arr_SeqNumpyLandmarks.shape[1] == 16)\
+                or (arr_SeqNumpyLandmarks.ndim == 2):
+            if arr_SeqNumpyLandmarks.ndim == 3:
+                # 01. Format to arr_SeqNumpyLandmarks_dim2
+                arr_SeqNumpyLandmarks_dim2 = arr_SeqNumpyLandmarks.reshape((-1, len(LIST_NumpyLandmark_VarType)))
+            else:
+                arr_SeqNumpyLandmarks_dim2 = arr_SeqNumpyLandmarks
+            # TrueTarget
+            nodeSeq_Landmarks = self.logic.obtainNodeSeq_GivenProxyNodeName(nodeSeqBrowser_Selected, STR_NodeName_SeqBrowserProxy_Landmarks)
+            num_DataNodes = nodeSeq_Landmarks.GetNumberOfDataNodes()
+            if not nodeSeq_Landmarks:
+                raise ValueError('SL_Alert! Should not be called if no landmarks');
+
+            arr_SeqNumpyLandmarks_Real = INT_DEFAULT_RAS_VALUE * \
+                        np.ones([num_DataNodes, len(LIST_LANDMARK_TYPE), len(LIST_NumpyLandmark_VarType)], dtype = float)
+            for idx_DataNode in range(len(arr_SeqNumpyLandmarks_dim2)):
+                arr_FrameLandmarks = self.getFrameIJRAS_from_AgentModelOutput(arr_SeqNumpyLandmarks_dim2[idx_DataNode],
+                                                                                 idx_DataNode)
+                arr_SeqNumpyLandmarks_Real[idx_DataNode] = arr_FrameLandmarks
+
+            arr_SeqNumpyLandmarks = arr_SeqNumpyLandmarks_Real
+        # To be removed
+        # -----------------------------------------------------
+
         num_TotalFrames = nodeSeqBrowser_Selected.GetNumberOfItems()
         if arr_SeqNumpyLandmarks.shape != (num_TotalFrames, len(LIST_LANDMARK_TYPE), len(LIST_NumpyLandmark_VarType)):
             self.qMessageBox_Critical(f'File not matched! \n\n'
@@ -1286,6 +1325,63 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
             self.uiUpdate_All_LandmarkPositionPanels_inCollapsibleButton() # II. uiUpdate:     landmarkCollapsibleButton
             self._updatingGUIFromParameterNode = False  # III. Close-Brace: All the GUI updates are done;
 
+    # ------------------------------------------------------------------------------------------------------------------
+    def getFrameIJRAS_from_AgentModelOutput(self, vec_AgentModelOutput_Var5, idx_TargetFrame):
+        print("**Widget.getFrameIJRAS_from_AgentModelOutput(self, vec_AgentModelOutput_Var5, idx_TargetFrame)")
+        assert vec_AgentModelOutput_Var5.size == 5, f'vec_AgentModelOutput_Var5.size= {vec_AgentModelOutput_Var5.size}'
+
+        arr_FrameLandmarks = INT_DEFAULT_RAS_VALUE * \
+                        np.ones([len(LIST_LANDMARK_TYPE), len(LIST_NumpyLandmark_VarType)], dtype = float)
+        # 00. ModelOutput to TrueTarget:    return Default FrameIJRAS if the ModelOutput is not Positive
+        def sl_Sigmoid(X):
+            return 1 / (1 + np.exp(-X))
+
+        binaryConf_Pos = sl_Sigmoid(vec_AgentModelOutput_Var5[0])  # Process using nn.Sigmoid
+        is_FramePositive = binaryConf_Pos > 0.5
+        if not is_FramePositive:
+            return arr_FrameLandmarks
+
+        # 01. TrueTarget ->     IJ_SonixTablet_Cropped
+        y_L = vec_AgentModelOutput_Var5[1] * NORM_ROW_GAPS
+        x_L = vec_AgentModelOutput_Var5[2] * NORM_COL_GAPS
+        y_R = vec_AgentModelOutput_Var5[3] * NORM_ROW_GAPS
+        x_R = vec_AgentModelOutput_Var5[4] * NORM_COL_GAPS
+
+        nodeSeqBrowser_Selected = self._parameterNode.GetNodeReference(STR_SeqBrowserNode_RefRole_Selected)
+
+        # 02-A. Get Matrix Ready:       mat4x4_World_2_SonixTablet_TargetFrame    &   mat_RASToIJK_TargetFrame
+        nodeSeq_LinearTransform = nodeSeqBrowser_Selected.GetSequenceNode(slicer.util.getNode(STR_NodeName_SeqBrowserProxy_LinearTransform))
+        nodeLinearTransform_TargetFrame = nodeSeq_LinearTransform.GetNthDataNode(idx_TargetFrame)
+        mat4x4_SonixTablet_2_World_TargetFrame = vtk.vtkMatrix4x4()
+        nodeLinearTransform_TargetFrame.GetMatrixTransformToWorld(mat4x4_SonixTablet_2_World_TargetFrame)
+
+        # 02-B. Get   node2DScan_TargetFrame -> mat_RASToIJK_TargetFrame:     to guarantee the Code-Scalability
+        nodeSeq_2DScan = nodeSeqBrowser_Selected.GetSequenceNode(slicer.util.getNode(STR_NodeName_SeqBrowserProxy_2DScan))
+        node2DScan_TargetFrame = nodeSeq_2DScan.GetNthDataNode(idx_TargetFrame)
+        mat_IJKToRAS = vtk.vtkMatrix4x4()
+        node2DScan_TargetFrame.GetIJKToRASMatrix(mat_IJKToRAS)
+
+        # 02-C. Get   tupleImShape_TargetFrame:   to detect landmark being in-Frame or out-Frame
+        vtkImageData_TargetFrame = node2DScan_TargetFrame.GetImageData()
+        tupleImShape_TargetFrame = vtkImageData_TargetFrame.GetDimensions()
+
+        # 03-A. From    IJ_SonixTablet_Cropped  to  IJ_SonixTablet
+        if tupleImShape_TargetFrame[0] == 640:  # image with black padding left and right
+            x_L += Valid_ColIdx_Start
+            y_L += Valid_RowIdx_Start
+            x_R += Valid_ColIdx_Start
+            y_R += Valid_RowIdx_Start
+        # 03-B. From    IJ_SonixTablet          to  RAS_SonixTablet
+        tuple4D_RAS_Sonix_L = mat_IJKToRAS.MultiplyPoint(list([x_L, y_L, 0]) + [1.0])
+        tuple4D_RAS_Sonix_R = mat_IJKToRAS.MultiplyPoint(list([x_R, y_R, 0]) + [1.0])
+        # 03-C. From    RAS_SonixTablet         to  RAS_World
+        tuple4D_RAS_World_L = mat4x4_SonixTablet_2_World_TargetFrame.MultiplyPoint(tuple4D_RAS_Sonix_L)
+        tuple4D_RAS_World_R = mat4x4_SonixTablet_2_World_TargetFrame.MultiplyPoint(tuple4D_RAS_Sonix_R)
+
+        arr_FrameLandmarks[0] = np.array([x_L, y_L, tuple4D_RAS_World_L[0], tuple4D_RAS_World_L[1], tuple4D_RAS_World_L[2]])
+        arr_FrameLandmarks[1] = np.array([x_R, y_R, tuple4D_RAS_World_R[0], tuple4D_RAS_World_R[1], tuple4D_RAS_World_R[2]])
+
+        return arr_FrameLandmarks
     # ------------------------------------------------------------------------------------------------------------------
     def updateFrameLandmarks_given_NumpyArray__uiAssert(self, node_SeqBrowser, idx_TargetFrame, node_PointList, \
                                                                 arr_FrameLandmarks_RAS, isUpdateCurves = True):
@@ -1448,8 +1544,13 @@ class sl_01__LaminaLandmark_LabelingLogic(ScriptedLoadableModuleLogic):
         return strFileName_NumpyLandmark
 
     def obtainStr_FileName_NumpySeqTransform(self, str_SeqMat_NodeName):
-        strFileName_NumpySeqTransform = f'{str_SeqMat_NodeName}__NormFeatureMat16.npy'
+        strFileName_NumpySeqTransform = f'{str_SeqMat_NodeName}__NormFeatureVec16.npy'
         return strFileName_NumpySeqTransform
+
+    def obtainStr_FileName_NumpySeqScan(self, str_SeqScan_NodeName):
+        idxName_Seq = int(str_SeqScan_NodeName.split('__')[0].split('_')[-1])
+        strFileName_NumpySeqScan = "0" + str(idxName_Seq) + "__" + str_SeqScan_NodeName + ".npy"
+        return strFileName_NumpySeqScan
 
     # ------------------------------------------------------------------------------------------------------------------
     def obtainSafe_idxPreFrame_from_TargetSeqBrowser(self, nodeTarget_SeqBrowser):
@@ -1655,6 +1756,22 @@ class sl_01__LaminaLandmark_LabelingLogic(ScriptedLoadableModuleLogic):
             arrSeq_NormFeatureVec16[idx_DataNode] = vec_NormFeatureVec16
 
         return arrSeq_NormFeatureVec16
+
+    # ------------------------------------------------------------------------------------------------------------------
+    def obtainArr_NumpySeqScan_SkinBottom_dim4(self, nodeSeq_2DScan):
+        if (not nodeSeq_2DScan) or (nodeSeq_2DScan.GetNumberOfDataNodes() == 0):
+            raise ValueError('SL_Alert! Invalid nodeSeq_2DScan');  return None
+
+        shape_2DScan = slicer.util.arrayFromVolume(nodeSeq_2DScan.GetNthDataNode(0)).shape
+
+        # 01. Initial a 4D array for the sequence of 2D scans
+        arrSeq_Scan_SkinBottom_dim4 = np.zeros([shape_2DScan[0], shape_2DScan[1], shape_2DScan[2], \
+                                                                        nodeSeq_2DScan.GetNumberOfDataNodes()])
+        # 02. Fill in the 4D array from the sequence node
+        for idx_Frame in range(nodeSeq_2DScan.GetNumberOfDataNodes()):
+            arrSeq_Scan_SkinBottom_dim4[:, :, :, idx_Frame] = slicer.util.arrayFromVolume(nodeSeq_2DScan.GetNthDataNode(idx_Frame))
+
+        return arrSeq_Scan_SkinBottom_dim4
 
     # ------------------------------------------------------------------------------------------------------------------
     def obtainNodeSeq_GivenProxyNodeName(self, nodeSeqBrowser, str_ProxyNodename):
