@@ -17,6 +17,8 @@ Example Scene File: <a href="https://www.dropbox.com/s/jxdn5bdex3v4u8i/00__Slice
 
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/rr0Q9GUuz7E/0.jpg)](https://www.youtube.com/watch?v=rr0Q9GUuz7E&list=PLTuWbByD80TORd1R-J7j7nVQ9fot3C2fK)
 
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/QsxzjQb05D4/0.jpg)](https://www.youtube.com/watch?v=QsxzjQb05D4&list=PLTuWbByD80TORd1R-J7j7nVQ9fot3C2fK)
+
 # <a href="https://www.youtube.com/watch?v=VcqLfAGfE6E&list=PLTuWbByD80TORd1R-J7j7nVQ9fot3C2fK" style="text-decoration:none">Step-by-step tutorial of 3D Slicer Extension Module Development</a>
 
 ## <a href="https://github.com/SenonETS/3DSlicerTutorial_ExtensionModuleDevelopment/tree/master/02__Interact_Debug_&_Pipeline" style="text-decoration:none">Step 02: Interact, Debug & Pipeline</a>
