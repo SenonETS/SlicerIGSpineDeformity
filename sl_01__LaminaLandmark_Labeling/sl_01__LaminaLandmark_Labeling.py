@@ -1232,13 +1232,14 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
         print(f'Saved arrSeq_NormFeatureVec16 to \n\t{strFilePath_NumpySeqTransform}')
 
         # 07. Get   nodeSeq_Scan   ->  strFilePath_NumpySeqScan     for sequences that are edited
+        '''
         nodeSeq_2DScan = self.logic.obtainNodeSeq_GivenProxyNodeName(nodeSeqBrowser_Selected, STR_NodeName_SeqBrowserProxy_2DScan)
         strFileName_NumpySeqScan = self.logic.obtainStr_FileName_NumpySeqScan(nodeSeq_2DScan.GetName())
         strFilePath_NumpySeqScan = f'{self.logic.obtainStr_SceneFileFolder(nodeSeqBrowser_Selected)}/{strFileName_NumpySeqScan}'
         arrSeq_Scan_SkinBottom_dim4 = self.logic.obtainArr_NumpySeqScan_SkinBottom_dim4(nodeSeq_2DScan)
         np.save(strFilePath_NumpySeqScan, arrSeq_Scan_SkinBottom_dim4)
         print(f'Saved arrSeq_Scan_SkinBottom_dim4 to \n\t{strFilePath_NumpySeqScan}')
-
+        '''
     # ------------------------------------------------------------------------------------------------------------------
     def onPushButton_Load_SeqNumpyLandmarks_Clicked(self):
         print("**Widget.onPushButton_Load_SeqNumpyLandmarks_Clicked(self), \tSL_Developer")
