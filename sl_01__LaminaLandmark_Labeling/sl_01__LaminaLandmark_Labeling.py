@@ -51,6 +51,7 @@ STR_AttriName_isCurve3PointsDisplay = 'isCurve3PointsDisplay' # whether to displ
 STR_NodeName_SeqBrowserProxy_Landmarks  = 'Proxy_pList_Landmarks'  # NodeName_SeqBroswerProxy_Landmarks__PointList
 STR_NodeName_SeqBrowserProxy_2DScan     = 'Image_Transducer'
 STR_NodeName_SeqBrowserProxy_LinearTransform = 'ProbeToTracker'
+STR_NodeName_AntiTransverse_Rotate90    = 'TransducerToProbe'
 STR_NodeName_CrossHair                  = 'Crosshair'
 
 # ------------------------------------------------------------------------------------------------------------------
@@ -187,6 +188,9 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
 
         self.ui.pushButton_Output_SeqNumpyLandmarks.clicked.connect(self.onPushButton_Output_SeqNumpyLandmarks_Clicked)
         self.ui.pushButton_Load_SeqNumpyLandmarks.clicked.connect(self.onPushButton_Load_SeqNumpyLandmarks_Clicked)
+
+        self.ui.pushButton_DeleteWholeFrameDataNode.clicked.connect(self.onPushButton_DeleteWholeFrameDataNode_Clicked)
+        self.ui.pushButton_DeleteWholeFrameDataNode.hide()
 
         # SL_Notes: can only be put here; Not able to disconnect, cannot be put into ener() or initializeParameterNode()
         self.initializeShortCut()   # Otherwise, if exit() and re-enter(), shortcut will not be functional; not sure why
@@ -1155,8 +1159,7 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
         print(f'\t\t\tRemoveAllControlPoints()')
         # 05. uiUpdate for LandmarkPositionLabels_curFrame (set N/A for both Left/Right labels)
         self._updatingGUIFromParameterNode = True  # I. Open-Brace:  Avoid updateParameterNodeFromGUI__ (infinite loop)
-        self.uiUpdate_LandmarkPositionPanel_TargetFrame(
-            strFrameType=STR_FRAME_TYPE_CURRENT)  # II. In-Brace: uiUpdate
+        self.uiUpdate_LandmarkPositionPanel_TargetFrame(strFrameType=STR_FRAME_TYPE_CURRENT)  # II. In-Brace: uiUpdate
         self._updatingGUIFromParameterNode = False  # III. Close-Brace: All the GUI updates are done;
 
     # ------------------------------------------------------------------------------------------------------------------
@@ -1232,14 +1235,57 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
         print(f'Saved arrSeq_NormFeatureVec16 to \n\t{strFilePath_NumpySeqTransform}')
 
         # 07. Get   nodeSeq_Scan   ->  strFilePath_NumpySeqScan     for sequences that are edited
-        '''
         nodeSeq_2DScan = self.logic.obtainNodeSeq_GivenProxyNodeName(nodeSeqBrowser_Selected, STR_NodeName_SeqBrowserProxy_2DScan)
         strFileName_NumpySeqScan = self.logic.obtainStr_FileName_NumpySeqScan(nodeSeq_2DScan.GetName())
         strFilePath_NumpySeqScan = f'{self.logic.obtainStr_SceneFileFolder(nodeSeqBrowser_Selected)}/{strFileName_NumpySeqScan}'
         arrSeq_Scan_SkinBottom_dim4 = self.logic.obtainArr_NumpySeqScan_SkinBottom_dim4(nodeSeq_2DScan)
         np.save(strFilePath_NumpySeqScan, arrSeq_Scan_SkinBottom_dim4)
         print(f'Saved arrSeq_Scan_SkinBottom_dim4 to \n\t{strFilePath_NumpySeqScan}')
-        '''
+
+    # ------------------------------------------------------------------------------------------------------------------
+    def onPushButton_DeleteWholeFrameDataNode_Clicked(self):
+        print("**Widget.onPushButton_DeleteWholeFrameDataNode_Clicked(self), \tSL_Developer")
+        # 01. Get the timestamp of current active Frame-DataNode
+        nodeSeqBrowser_Selected = self._parameterNode.GetNodeReference(STR_SeqBrowserNode_RefRole_Selected)
+        idx_CurSelectedFrame = nodeSeqBrowser_Selected.GetSelectedItemNumber()
+        nodeSeq_2DScan = nodeSeqBrowser_Selected.GetSequenceNode(slicer.util.getNode(STR_NodeName_SeqBrowserProxy_2DScan))
+        nodeSeq_LinearTransform = nodeSeqBrowser_Selected.GetSequenceNode(slicer.util.getNode(STR_NodeName_SeqBrowserProxy_LinearTransform))
+        nodeSeq_Landmarks = self.logic.obtainNodeSeq_GivenProxyNodeName(nodeSeqBrowser_Selected,
+                                                                        STR_NodeName_SeqBrowserProxy_Landmarks)
+
+        int_QResult = self.qMessageBox_Question(f"Current active   FrameIndex {idx_CurSelectedFrame + 1}, \tTimeStamp: "
+                        f"{nodeSeq_2DScan.GetNthIndexValue(idx_CurSelectedFrame)}\n\nYou sure to remove this Frame?")
+        if int_QResult == QMessageBox.Cancel:
+            return
+
+        # 02. Remove    idx_CurSelectedFrame        for          nodeSeq_2DScan,    nodeSeq_LinearTransform, and
+        num_Old_SequenceLength = nodeSeqBrowser_Selected.GetNumberOfItems()
+        nodeSeq_2DScan.RemoveDataNodeAtValue(nodeSeq_2DScan.GetNthIndexValue(idx_CurSelectedFrame))
+        nodeSeq_LinearTransform.RemoveDataNodeAtValue(nodeSeq_LinearTransform.GetNthIndexValue(idx_CurSelectedFrame))
+        if nodeSeq_2DScan.GetNumberOfDataNodes() != num_Old_SequenceLength - 1:     raise ValueError(f'Wrong removal !')
+        if nodeSeq_LinearTransform.GetNumberOfDataNodes() != num_Old_SequenceLength - 1: raise ValueError(f'Wrong rm !')
+        if nodeSeq_Landmarks:
+            nodeSeq_Landmarks.RemoveDataNodeAtValue(nodeSeq_Landmarks.GetNthIndexValue(idx_CurSelectedFrame))
+            if nodeSeq_Landmarks.GetNumberOfDataNodes() != num_Old_SequenceLength - 1:  raise ValueError(f'Wrong L rm!')
+
+    ''' 
+    def delete_Frame(idx_FrameToDelete):
+        print("delete_Frame(idx_FrameToDelete), \tSL_Developer")
+        # 01. Get the timestamp of current active Frame-DataNode
+        nodeSeqBrowser_Selected = getNode('SeqBrowser_5__S_LT__snS')
+        idx_CurSelectedFrame = nodeSeqBrowser_Selected.GetSelectedItemNumber()
+        nodeSeq_2DScan = getNode('Scan_5__S_LT__snS')
+        nodeSeq_LinearTransform = getNode('Track_5__S_LT__snS')
+        nodeSeq_Landmarks = getNode('Landmarks_5__S_LT__snS')
+        num_Old_SequenceLength = nodeSeqBrowser_Selected.GetNumberOfItems()
+        nodeSeq_2DScan.RemoveDataNodeAtValue(nodeSeq_2DScan.GetNthIndexValue(idx_FrameToDelete))
+        nodeSeq_LinearTransform.RemoveDataNodeAtValue(nodeSeq_LinearTransform.GetNthIndexValue(idx_FrameToDelete))
+        nodeSeq_Landmarks.RemoveDataNodeAtValue(nodeSeq_Landmarks.GetNthIndexValue(idx_FrameToDelete))
+        if nodeSeq_2DScan.GetNumberOfDataNodes() != num_Old_SequenceLength - 1:     raise ValueError(f'Wrong removal !')
+        if nodeSeq_LinearTransform.GetNumberOfDataNodes() != num_Old_SequenceLength - 1: raise ValueError(f'Wrong rm !')
+        if nodeSeq_Landmarks.GetNumberOfDataNodes() != num_Old_SequenceLength - 1:  raise ValueError(f'Wrong L rm!')
+    '''
+
     # ------------------------------------------------------------------------------------------------------------------
     def onPushButton_Load_SeqNumpyLandmarks_Clicked(self):
         print("**Widget.onPushButton_Load_SeqNumpyLandmarks_Clicked(self), \tSL_Developer")
@@ -1265,20 +1311,35 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
         #-----------------------------------------------------
         #   To be removed
         if (arr_SeqNumpyLandmarks.ndim == 3 and arr_SeqNumpyLandmarks.shape[1] == 16)\
-                or (arr_SeqNumpyLandmarks.ndim == 2):
+                or (arr_SeqNumpyLandmarks.ndim == 2)\
+                or (arr_SeqNumpyLandmarks.ndim == 3 and arr_SeqNumpyLandmarks.shape[1] == 2 and arr_SeqNumpyLandmarks.shape[2] == 5):
             if arr_SeqNumpyLandmarks.ndim == 3:
-                # 01. Format to arr_SeqNumpyLandmarks_dim2
-                arr_SeqNumpyLandmarks_dim2 = arr_SeqNumpyLandmarks.reshape((-1, len(LIST_NumpyLandmark_VarType)))
+                if arr_SeqNumpyLandmarks.shape[1] == 16:
+                    # 01. Video_ModelOutput (SL_RCN), Format to arr_SeqNumpyLandmarks_dim2
+                    arr_SeqNumpyLandmarks_dim2 = arr_SeqNumpyLandmarks.reshape((-1, len(LIST_NumpyLandmark_VarType)))
+                else:
+                    # 02. Slicer Output Numpy Sequence Landmarks, IJRAS: change to ModelOutput
+                    arr_SeqNumpyLandmarks_dim2 = np.zeros([len(arr_SeqNumpyLandmarks), 5])
+                    for i in range(len(arr_SeqNumpyLandmarks)):
+                        arr_FrameIJRAS =  arr_SeqNumpyLandmarks[i]
+                        if arr_FrameIJRAS[0, 0] != INT_DEFAULT_RAS_VALUE and arr_FrameIJRAS[0, 0] != INT_NEGATIVE_RAS_VALUE:
+                            arr_SeqNumpyLandmarks_dim2[i] = [1, arr_FrameIJRAS[0][1] / NORM_ROW_GAPS, arr_FrameIJRAS[0][0] / NORM_COL_GAPS,
+                                                                arr_FrameIJRAS[1][1] / NORM_ROW_GAPS, arr_FrameIJRAS[1][0] / NORM_COL_GAPS]
             else:
-                arr_SeqNumpyLandmarks_dim2 = arr_SeqNumpyLandmarks
+                if arr_SeqNumpyLandmarks.shape[1] == 6:
+                    arr_SeqNumpyLandmarks_dim2 = arr_SeqNumpyLandmarks[:, 1:]
+                elif arr_SeqNumpyLandmarks.shape[1] == 5:
+                    arr_SeqNumpyLandmarks_dim2 = arr_SeqNumpyLandmarks
+                else:
+                    raise ValueError(f'arr_SeqNumpyLandmarks.shape = {arr_SeqNumpyLandmarks.shape}'); return
+
             # TrueTarget
-            nodeSeq_Landmarks = self.logic.obtainNodeSeq_GivenProxyNodeName(nodeSeqBrowser_Selected, STR_NodeName_SeqBrowserProxy_Landmarks)
-            num_DataNodes = nodeSeq_Landmarks.GetNumberOfDataNodes()
-            if not nodeSeq_Landmarks:
-                raise ValueError('SL_Alert! Should not be called if no landmarks');
+            num_Frames = nodeSeqBrowser_Selected.GetNumberOfItems()
+            if num_Frames != len(arr_SeqNumpyLandmarks_dim2):
+                raise ValueError(f'len(arr_SeqNumpyLandmarks_dim2) = {len(arr_SeqNumpyLandmarks_dim2)}'); return
 
             arr_SeqNumpyLandmarks_Real = INT_DEFAULT_RAS_VALUE * \
-                        np.ones([num_DataNodes, len(LIST_LANDMARK_TYPE), len(LIST_NumpyLandmark_VarType)], dtype = float)
+                        np.ones([num_Frames, len(LIST_LANDMARK_TYPE), len(LIST_NumpyLandmark_VarType)], dtype = float)
             for idx_DataNode in range(len(arr_SeqNumpyLandmarks_dim2)):
                 arr_FrameLandmarks = self.getFrameIJRAS_from_AgentModelOutput(arr_SeqNumpyLandmarks_dim2[idx_DataNode],
                                                                                  idx_DataNode)
@@ -1355,6 +1416,12 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
         nodeLinearTransform_TargetFrame = nodeSeq_LinearTransform.GetNthDataNode(idx_TargetFrame)
         mat4x4_SonixTablet_2_World_TargetFrame = vtk.vtkMatrix4x4()
         nodeLinearTransform_TargetFrame.GetMatrixTransformToWorld(mat4x4_SonixTablet_2_World_TargetFrame)
+        #       02-A-ii.    Anti-Transverse:    Rotate 90 degrees   using the LinearTransform   TransducerToProbe'''
+        nodeLinearTransform_Rotate_90 = slicer.util.getNode(STR_NodeName_AntiTransverse_Rotate90)
+        mat4x4_Rotate_90 = vtk.vtkMatrix4x4()
+        nodeLinearTransform_Rotate_90.GetMatrixTransformToParent(mat4x4_Rotate_90)
+        vtk.vtkMatrix4x4().Multiply4x4(mat4x4_SonixTablet_2_World_TargetFrame, mat4x4_Rotate_90, mat4x4_SonixTablet_2_World_TargetFrame)
+        # '''
 
         # 02-B. Get   node2DScan_TargetFrame -> mat_RASToIJK_TargetFrame:     to guarantee the Code-Scalability
         nodeSeq_2DScan = nodeSeqBrowser_Selected.GetSequenceNode(slicer.util.getNode(STR_NodeName_SeqBrowserProxy_2DScan))
@@ -1611,6 +1678,12 @@ class sl_01__LaminaLandmark_LabelingLogic(ScriptedLoadableModuleLogic):
         nodeLinearTransform_TargetFrame = nodeSeq_LinearTransform.GetNthDataNode(idx_TargetFrame)
         mat4x4_SonixTablet_2_World_TargetFrame = vtk.vtkMatrix4x4()
         nodeLinearTransform_TargetFrame.GetMatrixTransformToWorld(mat4x4_SonixTablet_2_World_TargetFrame)
+        #       01-i.    Anti-Transverse:    Rotate 90 degrees   using the LinearTransform   TransducerToProbe'''
+        nodeLinearTransform_Rotate_90 = slicer.util.getNode(STR_NodeName_AntiTransverse_Rotate90)
+        mat4x4_Rotate_90 = vtk.vtkMatrix4x4()
+        nodeLinearTransform_Rotate_90.GetMatrixTransformToParent(mat4x4_Rotate_90)
+        vtk.vtkMatrix4x4().Multiply4x4(mat4x4_SonixTablet_2_World_TargetFrame, mat4x4_Rotate_90, mat4x4_SonixTablet_2_World_TargetFrame)
+        #       01-ii.  Invert, get mat4x4_World_2_SonixTablet_TargetFrame
         mat4x4_World_2_SonixTablet_TargetFrame = vtk.vtkMatrix4x4()
         vtk.vtkMatrix4x4.Invert(mat4x4_SonixTablet_2_World_TargetFrame, mat4x4_World_2_SonixTablet_TargetFrame)
         # 02. Get   node2DScan_TargetFrame -> mat_RASToIJK_TargetFrame:     to guarantee the Code-Scalability
@@ -1748,9 +1821,16 @@ class sl_01__LaminaLandmark_LabelingLogic(ScriptedLoadableModuleLogic):
             # 01. Get vtkMat4x4
             mat4x4_SonixTablet_2_World = vtk.vtkMatrix4x4()
             node_LinearTransform.GetMatrixTransformToWorld(mat4x4_SonixTablet_2_World)
+            #       01-i.    Anti-Transverse:    Rotate 90 degrees   using the LinearTransform   TransducerToProbe'''
+            nodeLinearTransform_Rotate_90 = slicer.util.getNode(STR_NodeName_AntiTransverse_Rotate90)
+            mat4x4_Rotate_90 = vtk.vtkMatrix4x4()
+            nodeLinearTransform_Rotate_90.GetMatrixTransformToParent(mat4x4_Rotate_90)
+            vtk.vtkMatrix4x4().Multiply4x4(mat4x4_SonixTablet_2_World, mat4x4_Rotate_90, mat4x4_SonixTablet_2_World)
+
             # 02. Get arr_Mat4x4, the init arr_NormFeatureVec16 from vtkMat4x4
             vec_NormFeatureVec16 = np.zeros([16])
             mat4x4_SonixTablet_2_World.DeepCopy(vec_NormFeatureVec16, mat4x4_SonixTablet_2_World)
+
             # 03. Get Normalize arr_Mat4x4 to get arr_NormFeatureVec16
             vec_NormFeatureVec16[[3, 7, 11]] *= 0.01   # Rescale the translation value, divide by 100 to reduce the loss
             # 04. Fill up arrSeq_NormFeatureVec16
@@ -2340,13 +2420,7 @@ class sl_01__LaminaLandmark_LabelingLogic(ScriptedLoadableModuleLogic):
         if not idxFrame == nodeSeqBrowser_Target.GetSelectedItemNumber():
             raise ValueError(f'strLabel_ControlPoint = {strLabel_ControlPoint}, \t '
                     f'nodeSeqBrowser_Target.GetSelectedItemNumber() = {nodeSeqBrowser_Target.GetSelectedItemNumber()}')
-        # 03. Get nodeCurve_Target Landmark
-        if str_LabelPrefix == STR_ControlPointLabelPrefix_Left:
-            nodeCurve_Target = nodeSeqBrowser_Target.GetNodeReference(STR_CurveNode_RefRole_LeftLamina)
-        elif str_LabelPrefix == STR_ControlPointLabelPrefix_Right:
-            nodeCurve_Target = nodeSeqBrowser_Target.GetNodeReference(STR_CurveNode_RefRole_RightLamina)
-        else:  raise ValueError(f'str_LabelPrefix = {str_LabelPrefix}') # Should ot be SpinalCord
-        # 04-A. Update nodeCurve_Target     &   curveSpinalCord is applicable
+        # 03. Update nodeCurve_Target     &   curveSpinalCord is applicable
         vtkVec3d_RAS_WorldPosition = nodePointList_Target.GetNthControlPointPositionVector(idxControlPoint_PointList_Target)
         self.updateCurves_OneLandmark_TargetFrame_GivenRAS(nodeSeqBrowser_Target, idxFrame, str_LabelPrefix, vtkVec3d_RAS_WorldPosition)
 
@@ -2376,7 +2450,7 @@ class sl_01__LaminaLandmark_LabelingLogic(ScriptedLoadableModuleLogic):
         elif str_LandmarkPrefix == STR_ControlPointLabelPrefix_Right:
             nodeCurve_Target    = nodeSeqBrowser_Target.GetNodeReference(STR_CurveNode_RefRole_RightLamina)
             nodeCurve_Opposite  = nodeSeqBrowser_Target.GetNodeReference(STR_CurveNode_RefRole_LeftLamina)
-        else:  raise ValueError(f'str_LandmarkPrefix = {str_LandmarkPrefix}')
+        else:  raise ValueError(f'str_LandmarkPrefix = {str_LandmarkPrefix}')  # Should ot be SpinalCord
 
         # 02. Update nodeCurve_Target
         nodeCurve_Target.SetNthControlPointPosition(idx_TargetFrame, vec_RAS_WorldPosition)
