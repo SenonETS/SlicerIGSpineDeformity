@@ -3,6 +3,12 @@
 ## Extension Dependency:
 	### SlicerIGSIO, SlicerIGT, SlicerOpenIGTLink
 
+## Publication:
+	### https://doi.org/10.1109/TUFFC.2024.3385698
+	### Automatic 3D Lamina Curve Extraction from Freehand 3D Ultrasound Data
+	### https://doi.org/10.1117/12.2653277
+
+
 ## Module: Lamina Landmark Labeling
 ### UI figure
 <img src="https://github.com/SenonETS/SlicerIGSpineDeformity/blob/main/sl_01__LaminaLandmark_Labeling/SL_ScreenShot.PNG" alt="isolated" width="800"/>
