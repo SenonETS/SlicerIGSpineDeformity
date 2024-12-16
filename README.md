@@ -4,7 +4,7 @@
 	### SlicerIGSIO, SlicerIGT, SlicerOpenIGTLink
 
 ## Publication:
-	<a href="https://doi.org/10.1109/TUFFC.2024.3385698">Automatic 3D Lamina Curve Extraction from Freehand 3D Ultrasound Data </a>
+<a href="https://doi.org/10.1109/TUFFC.2024.3385698">Automatic 3D Lamina Curve Extraction from Freehand 3D Ultrasound Data </a>
 	### https://doi.org/10.1109/TUFFC.2024.3385698
 	### https://doi.org/10.1117/12.2653277
 
