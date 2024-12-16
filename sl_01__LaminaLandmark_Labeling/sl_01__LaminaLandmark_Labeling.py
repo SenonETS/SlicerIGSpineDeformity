@@ -122,9 +122,15 @@ class sl_01__LaminaLandmark_Labeling(ScriptedLoadableModule):
         self.parent.dependencies = ['Markups', 'Sequences']          # Add here list of module names that this module requires
         self.parent.contributors = ["Sen Li"]   # Replace with "Firstname Lastname (Organization)"
         # TODO:     10. update with a link to online module Tutorial
-        self.parent.helpText = """This is sl_01__LaminaLandmark_Labeling ! """
+        self.parent.helpText =  'https://doi.org/10.1109/TUFFC.2024.3385698'
         self.parent.helpText += self.getDefaultModuleDocumentationLink()
-        self.parent.acknowledgementText = 'Spine Deformity Analysis using Freehand 3D Ultrasound. \nThis file was originally developed by Sen Li, LATIS, École de techonologie supérieure. \nSen.Li.1@ens.etsmtl.ca'
+        self.parent.acknowledgementText = ('https://doi.org/10.1109/TUFFC.2024.3385698'
+                                           "                                          "
+                                           '\nAutomatic 3D Lamina Curve Extraction from Freehand 3D Ultrasound Data'
+                                           '\nhttps://doi.org/10.1117/12.2653277'
+                                           '\nSpine Deformity Analysis using Freehand 3D Ultrasound. '
+                                           '\nThis file was originally developed by Sen Li, LATIS, École de techonologie supérieure. '
+                                           '\nSen.Li.1@ens.etsmtl.ca')
 
         print("sl_01__LaminaLandmark_Labeling(Module):    __init__(self, parent)")
 

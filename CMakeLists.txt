@@ -1,13 +1,16 @@
 cmake_minimum_required(VERSION 3.16.3...3.19.7 FATAL_ERROR)
 
-project(SlicerIGSpineDeformity)
+project(IGSpineDeformity)
 
 #-----------------------------------------------------------------------------
 # Extension meta-information
 set(EXTENSION_HOMEPAGE "https://github.com/SenonETS/SlicerIGSpineDeformity#readme")
 set(EXTENSION_CATEGORY "IGT")
 set(EXTENSION_CONTRIBUTORS "Sen Li (École de technologie supérieure)")
-set(EXTENSION_DESCRIPTION "This Module is designed for spine deformity analysis using freehand 3D ultrasound imaging, and the first module Lamina Landmark Labeling help find the Spinal Cord curve in 3D, which can be projected to three anatomical planes, e.g., for Scoliosis analysis using the Cobb angle when projected to the front back view.")
+set(EXTENSION_DESCRIPTION "https://doi.org/10.1109/TUFFC.2024.3385698
+Automatic 3D Lamina Curve Extraction from Freehand 3D Ultrasound Data
+https://doi.org/10.1117/12.2653277
+This Module is designed for spine deformity analysis using freehand 3D ultrasound imaging, and the first module Lamina Landmark Labeling help find the Spinal Cord curve in 3D, which can be projected to three anatomical planes, e.g., for Scoliosis analysis using the Cobb angle when projected to the front back view.")
 set(EXTENSION_ICONURL "https://raw.githubusercontent.com/SenonETS/SlicerIGSpineDeformity/main/SlicerIGSpineDeformity_Icon_128x128.png")
 set(EXTENSION_SCREENSHOTURLS "https://raw.githubusercontent.com/SenonETS/SlicerIGSpineDeformity/main/sl_01__LaminaLandmark_Labeling/SL_ScreenShot.PNG")
 set(EXTENSION_DEPENDS "NA") # Specified as a list or "NA" if no dependencies
