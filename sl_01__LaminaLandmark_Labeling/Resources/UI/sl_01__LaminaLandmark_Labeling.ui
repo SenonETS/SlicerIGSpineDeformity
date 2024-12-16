@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>485</width>
-    <height>556</height>
+    <width>527</width>
+    <height>563</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -269,7 +269,7 @@
       <item>
        <widget class="QWidget" name="widget_curFrame" native="true">
         <property name="styleSheet">
-         <string notr="true">background-color: rgb(237, 255, 237);</string>
+         <string notr="true"/>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_6">
          <property name="spacing">
@@ -631,7 +631,7 @@ QPushButton#pushButton_DropLeft:hover:pressed{
          <widget class="QPushButton" name="pushButton_StartSeqLabeling">
           <property name="minimumSize">
            <size>
-            <width>112</width>
+            <width>136</width>
             <height>0</height>
            </size>
           </property>
