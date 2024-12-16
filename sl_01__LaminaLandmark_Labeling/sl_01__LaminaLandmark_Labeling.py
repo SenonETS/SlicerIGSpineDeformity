@@ -189,8 +189,8 @@ class sl_01__LaminaLandmark_LabelingWidget(ScriptedLoadableModuleWidget, VTKObse
         self.ui.pushButton_Output_SeqNumpyLandmarks.clicked.connect(self.onPushButton_Output_SeqNumpyLandmarks_Clicked)
         self.ui.pushButton_Load_SeqNumpyLandmarks.clicked.connect(self.onPushButton_Load_SeqNumpyLandmarks_Clicked)
 
-        self.ui.pushButton_DeleteWholeFrameDataNode.clicked.connect(self.onPushButton_DeleteWholeFrameDataNode_Clicked)
-        self.ui.pushButton_DeleteWholeFrameDataNode.hide()
+        # self.ui.pushButton_DeleteWholeFrameDataNode.clicked.connect(self.onPushButton_DeleteWholeFrameDataNode_Clicked)
+        # self.ui.pushButton_DeleteWholeFrameDataNode.hide()
 
         # SL_Notes: can only be put here; Not able to disconnect, cannot be put into ener() or initializeParameterNode()
         self.initializeShortCut()   # Otherwise, if exit() and re-enter(), shortcut will not be functional; not sure why
@@ -1680,10 +1680,13 @@ class sl_01__LaminaLandmark_LabelingLogic(ScriptedLoadableModuleLogic):
         mat4x4_SonixTablet_2_World_TargetFrame = vtk.vtkMatrix4x4()
         nodeLinearTransform_TargetFrame.GetMatrixTransformToWorld(mat4x4_SonixTablet_2_World_TargetFrame)
         #       01-i.    Anti-Transverse:    Rotate 90 degrees   using the LinearTransform   TransducerToProbe'''
-        nodeLinearTransform_Rotate_90 = slicer.util.getNode(STR_NodeName_AntiTransverse_Rotate90)
-        mat4x4_Rotate_90 = vtk.vtkMatrix4x4()
-        nodeLinearTransform_Rotate_90.GetMatrixTransformToParent(mat4x4_Rotate_90)
-        vtk.vtkMatrix4x4().Multiply4x4(mat4x4_SonixTablet_2_World_TargetFrame, mat4x4_Rotate_90, mat4x4_SonixTablet_2_World_TargetFrame)
+        listNodes_LinearTransform = slicer.util.getNodesByClass('vtkMRMLLinearTransformNode')
+        listStr_NodeNames = [node.GetName() for node in listNodes_LinearTransform]
+        if STR_NodeName_AntiTransverse_Rotate90 in listStr_NodeNames:
+            nodeLinearTransform_Rotate_90 = slicer.util.getNode(STR_NodeName_AntiTransverse_Rotate90)
+            mat4x4_Rotate_90 = vtk.vtkMatrix4x4()
+            nodeLinearTransform_Rotate_90.GetMatrixTransformToParent(mat4x4_Rotate_90)
+            vtk.vtkMatrix4x4().Multiply4x4(mat4x4_SonixTablet_2_World_TargetFrame, mat4x4_Rotate_90, mat4x4_SonixTablet_2_World_TargetFrame)
         #       01-ii.  Invert, get mat4x4_World_2_SonixTablet_TargetFrame
         mat4x4_World_2_SonixTablet_TargetFrame = vtk.vtkMatrix4x4()
         vtk.vtkMatrix4x4.Invert(mat4x4_SonixTablet_2_World_TargetFrame, mat4x4_World_2_SonixTablet_TargetFrame)
